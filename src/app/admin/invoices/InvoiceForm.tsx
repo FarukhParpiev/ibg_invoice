@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import {
   createDraftInvoice,
   updateDraftInvoice,
@@ -248,16 +248,18 @@ export function InvoiceForm({
           </Field>
 
           <Field label="Контрагент" error={formState.errors.counterpartyId?.message} wide>
-            <select className="input" {...register("counterpartyId")}>
-              <option value="">— выберите —</option>
-              {ctx.counterparties
-                .filter((c) => c.isActive)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </select>
+            <Controller
+              control={control}
+              name="counterpartyId"
+              render={({ field }) => (
+                <CounterpartyCombobox
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={ctx.counterparties.filter((c) => c.isActive)}
+                />
+              )}
+            />
           </Field>
         </div>
       </section>
@@ -748,6 +750,171 @@ function LineTotal({
     <div className="text-right text-sm tabular-nums">
       <span className="text-zinc-500">Сумма позиции: </span>
       <span className="font-medium">{fmt(amountThb)}</span>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Combobox контрагента: type-ahead поиск по 121+ записям.
+// Фильтр по подстроке, нечувствительный к регистру; работает и на латинице,
+// и на тайском, и на кириллице (у нас есть Miss ... / บริษัท ... / ИП ...).
+// Клиентский (ctx.counterparties уже загружен в форму из SSR) — не дёргает API.
+//
+// value — UUID выбранного контрагента (или ""). onChange(id) отдаёт наружу.
+// ───────────────────────────────────────────────────────────────────────────
+type CounterpartyOption = { id: string; name: string };
+
+function CounterpartyCombobox({
+  value,
+  onChange,
+  onBlur,
+  options,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  onBlur?: () => void;
+  options: CounterpartyOption[];
+}) {
+  const selected = useMemo(
+    () => options.find((o) => o.id === value) ?? null,
+    [options, value],
+  );
+
+  const [query, setQuery] = useState(selected?.name ?? "");
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Если значение извне поменялось (edit mode, сброс формы) — синхронизируем input
+  useEffect(() => {
+    setQuery(selected?.name ?? "");
+  }, [selected]);
+
+  // Закрытие по клику вне
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!wrapperRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.name.toLowerCase().includes(q));
+  }, [query, options]);
+
+  // Показываем максимум 50 — если список огромный, пусть сужают запрос
+  const visible = filtered.slice(0, 50);
+
+  const commit = (opt: CounterpartyOption) => {
+    onChange(opt.id);
+    setQuery(opt.name);
+    setOpen(false);
+  };
+
+  const clear = () => {
+    onChange("");
+    setQuery("");
+    setOpen(true);
+    setHighlight(0);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        type="text"
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+        className="input"
+        placeholder="Начните вводить имя контрагента…"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          setHighlight(0);
+          // Если пользователь стёр имя — сбрасываем привязку
+          if (e.target.value === "") onChange("");
+          else if (selected && e.target.value !== selected.name) onChange("");
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          // Если в поле текст, который не совпадает ни с одним контрагентом,
+          // откатываем к последнему валидному выбору (или пусто).
+          // Даём mousedown по элементу списка успеть сработать.
+          setTimeout(() => {
+            setOpen(false);
+            setQuery(selected?.name ?? "");
+            onBlur?.();
+          }, 120);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setOpen(true);
+            setHighlight((i) => Math.min(i + 1, visible.length - 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setHighlight((i) => Math.max(i - 1, 0));
+          } else if (e.key === "Enter") {
+            if (open && visible[highlight]) {
+              e.preventDefault();
+              commit(visible[highlight]);
+            }
+          } else if (e.key === "Escape") {
+            setOpen(false);
+            setQuery(selected?.name ?? "");
+          }
+        }}
+      />
+      {selected && (
+        <button
+          type="button"
+          onClick={clear}
+          aria-label="Очистить"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-sm"
+        >
+          ×
+        </button>
+      )}
+
+      {open && (
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border rounded shadow-md text-sm max-h-72 overflow-auto">
+          {visible.length === 0 ? (
+            <div className="px-3 py-2 text-zinc-500">Ничего не найдено</div>
+          ) : (
+            <ul role="listbox">
+              {visible.map((o, i) => (
+                <li
+                  key={o.id}
+                  role="option"
+                  aria-selected={i === highlight}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    commit(o);
+                  }}
+                  onMouseEnter={() => setHighlight(i)}
+                  className={`px-3 py-1.5 cursor-pointer ${
+                    i === highlight ? "bg-zinc-100" : ""
+                  }`}
+                >
+                  {o.name}
+                </li>
+              ))}
+              {filtered.length > visible.length && (
+                <li className="px-3 py-1.5 text-zinc-400 text-xs border-t">
+                  ещё {filtered.length - visible.length} — уточните запрос
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
