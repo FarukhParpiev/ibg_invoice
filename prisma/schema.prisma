@@ -155,7 +155,6 @@ model BankAccount {
 enum PreferredLanguage {
   en
   th
-  ru
 }
 
 model Counterparty {

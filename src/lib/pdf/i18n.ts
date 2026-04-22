@@ -1,6 +1,6 @@
 // Text strings for PDF invoices. Language is picked from counterparty.preferredLanguage.
 
-export type PdfLang = "en" | "th" | "ru";
+export type PdfLang = "en" | "th";
 
 type Dict = {
   invoice: string;
@@ -141,52 +141,6 @@ const dicts: Record<PdfLang, Dict> = {
     cancelledReason: "เหตุผล",
     page: "หน้า",
     of: "จาก",
-  },
-  ru: {
-    invoice: "СЧЁТ-ФАКТУРА",
-    receipt: "КВИТАНЦИЯ",
-    number: "№",
-    issueDate: "Дата выпуска",
-    dueDate: "Срок оплаты",
-    billTo: "Кому",
-    from: "От",
-    description: "Описание",
-    project: "Проект",
-    unit: "Юнит",
-    qty: "Кол-во",
-    rate: "Ставка",
-    amount: "Сумма",
-    commission: "Комиссия",
-    bonus: "Бонус",
-    other: "Прочее",
-    sellingPrice: "Цена продажи",
-    subtotal: "Итого",
-    vat: "НДС 7%",
-    vatIncluded: "включён в сумму",
-    wht: "Удерживаемый налог 3%",
-    total: "К оплате",
-    totalUsdEquivalent: "Итого (эквивалент в USD)",
-    exchangeRate: "Курс",
-    paymentDetails: "Платёжные реквизиты",
-    bankName: "Банк",
-    accountName: "Владелец счёта",
-    accountNumber: "Номер счёта",
-    swift: "SWIFT",
-    branch: "Филиал",
-    bankAddress: "Адрес банка",
-    paymentTerms: "Условия оплаты",
-    cash: "Оплата наличными",
-    crypto: "Оплата в крипте",
-    notes: "Примечания",
-    taxId: "ИНН",
-    registrationNo: "Рег. номер",
-    phone: "Телефон",
-    email: "E-mail",
-    paidOn: "Оплачено",
-    cancelled: "ОТМЕНЁН",
-    cancelledReason: "Причина",
-    page: "Страница",
-    of: "из",
   },
 };
 

@@ -1,6 +1,6 @@
-// Справочник контрагентов — вкладка Companies из исходной Google-таблицы
-// (раздел COUNTERPARTY, строки 57+).
-// Используется скриптом prisma/seed-counterparties.ts.
+// Counterparty reference — Companies tab from the original Google sheet
+// (COUNTERPARTY section, rows 57+).
+// Used by the prisma/seed-counterparties.ts script.
 
 import type { PreferredLanguage } from "@prisma/client";
 
@@ -17,12 +17,6 @@ const THAI_RE = /[\u0E00-\u0E7F]/;
 
 function lang(name: string): PreferredLanguage {
   if (THAI_RE.test(name)) return "th";
-  // Mr. / Miss / Mrs. без тайских букв — скорее всего русскоязычный контакт
-  if (/^(Mr\.?|Miss|Mrs\.?)\s*[A-Z]/.test(name)) {
-    // Metinee Boonratanaamorn — тайское имя латиницей, оставляем en
-    if (/Metinee|Boonratan/.test(name)) return "en";
-    return "ru";
-  }
   return "en";
 }
 

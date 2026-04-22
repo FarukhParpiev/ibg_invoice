@@ -59,7 +59,7 @@ function fmt(
 ): string {
   if (n == null) return "—";
   const num = Number(n);
-  const locale = lang === "th" ? "en-US" : lang === "ru" ? "ru-RU" : "en-US";
+  const locale = lang === "th" ? "en-US" : "en-US";
   return num.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -67,7 +67,7 @@ function fmt(
 }
 
 function fmtDate(d: Date, lang: PdfLang): string {
-  const locale = lang === "th" ? "en-GB" : lang === "ru" ? "ru-RU" : "en-GB";
+  const locale = lang === "th" ? "en-GB" : "en-GB";
   return d.toLocaleDateString(locale, {
     year: "numeric",
     month: "2-digit",

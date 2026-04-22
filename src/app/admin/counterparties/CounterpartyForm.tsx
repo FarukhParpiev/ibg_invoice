@@ -95,7 +95,6 @@ export function CounterpartyForm({
           <select className="input" {...register("preferredLanguage")}>
             <option value="en">English</option>
             <option value="th">ภาษาไทย</option>
-            <option value="ru">Russian</option>
           </select>
         </Field>
 

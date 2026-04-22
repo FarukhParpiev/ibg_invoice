@@ -12,7 +12,7 @@ const counterpartySchema = z.object({
   taxId: z.string().max(100).optional().or(z.literal("")),
   phone: z.string().max(100).optional().or(z.literal("")),
   email: z.string().email("Invalid e-mail").or(z.literal("")),
-  preferredLanguage: z.enum(["en", "th", "ru"]),
+  preferredLanguage: z.enum(["en", "th"]),
   notes: z.string().max(5000).optional().or(z.literal("")),
   isActive: z.boolean(),
 });
