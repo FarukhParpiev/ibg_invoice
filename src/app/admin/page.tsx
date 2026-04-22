@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requireAdminAccess } from "@/lib/auth-helpers";
+
+type Card = {
+  title: string;
+  value: number;
+  href: string;
+  hint: string;
+};
 
 export default async function AdminDashboardPage() {
+  const session = await requireAdminAccess();
+  const isSuperAdmin = session.user.role === "super_admin";
+
   const [companiesCount, counterpartiesCount, invoicesCount, draftCount] =
     await Promise.all([
       prisma.company.count({ where: { isActive: true } }),
@@ -10,13 +21,20 @@ export default async function AdminDashboardPage() {
       prisma.invoice.count({ where: { status: "draft" } }),
     ]);
 
-  const cards = [
-    {
+  const cards: Card[] = [];
+
+  // "Our companies" is super-admin territory — don't show a dead link to
+  // regular users (they'd get /?error=forbidden on click).
+  if (isSuperAdmin) {
+    cards.push({
       title: "Our companies",
       value: companiesCount,
       href: "/admin/companies",
       hint: "Active",
-    },
+    });
+  }
+
+  cards.push(
     {
       title: "Counterparties",
       value: counterpartiesCount,
@@ -35,7 +53,7 @@ export default async function AdminDashboardPage() {
       href: "/admin/invoices?status=draft",
       hint: "With status draft",
     },
-  ];
+  );
 
   return (
     <div className="space-y-8">
