@@ -1,0 +1,162 @@
+// Справочник контрагентов — вкладка Companies из исходной Google-таблицы
+// (раздел COUNTERPARTY, строки 57+).
+// Используется скриптом prisma/seed-counterparties.ts.
+
+import type { PreferredLanguage } from "@prisma/client";
+
+export type SeedCounterparty = {
+  name: string;
+  address: string | null;
+  taxId: string | null;
+  phone: string | null;
+  email: string | null;
+  preferredLanguage: PreferredLanguage;
+};
+
+const THAI_RE = /[\u0E00-\u0E7F]/;
+
+function lang(name: string): PreferredLanguage {
+  if (THAI_RE.test(name)) return "th";
+  // Mr. / Miss / Mrs. без тайских букв — скорее всего русскоязычный контакт
+  if (/^(Mr\.?|Miss|Mrs\.?)\s*[A-Z]/.test(name)) {
+    // Metinee Boonratanaamorn — тайское имя латиницей, оставляем en
+    if (/Metinee|Boonratan/.test(name)) return "en";
+    return "ru";
+  }
+  return "en";
+}
+
+type Raw = [string, string | null, string | null, string | null, string | null];
+
+const rows: Raw[] = [
+  ["Phuket9 Real Estate Development Co., Ltd", "58/148 Moo.6, Rawai Sub-District, Muang District, Phuket 83130", "083 555 701 3965", "66 98 674 7096", null],
+  ["Rhom Bho Property PLC", "444-444/1 Pracha Uthit Rd,  Huaykwang ,Huaykwang District , Bangkok10310", "010 755 900 0478", "02 1036444", null],
+  ["N6 VIP KARON Co.,Ltd.", "83/87 Moo2, Rawai-Naiharn Rd,Tambol Rawai, Amphur Muang, Phuket 83130", "083 5562003727", "084 0616905", null],
+  ["Tion Star Group Co.,Ltd.", "88/88 Moo4, Tambol Chengtalay, Amphur Thalang, Phuket 83110", "083 5565006581", null, null],
+  ["Praytian 88 Phuket Co.,Ltd.", "88/88 Moo4, Tambol Chengtalay, Thalang District,Phuket 83110.", "0835566027141", null, null],
+  ["Essence Residence Co., Ltd", "88/89 Moo2, Rawai Sub Distric, Muang Phuket Distric, Phuket Province, Thailand", "0835564006545", null, null],
+  ["Minor International Public Company Limited", "88 The Parq Building 12th Fl, Ratchadaphisek Road, Klongtaey Subdistrict, Klongtoey District,Bangkok10110", "0107536000919", null, null],
+  ["Citygate Exclusive Development Company Limited", "64/168 Moo5, Kamala sub-district, Kathu district, Phuket 83150", "0835557012811", "0910426146", null],
+  ["Bell Land Development Co.,Ltd.", "36/1 Moo6, Tambol Chengtalay, Amphur Thalang, Phuket 83110", "0835566033591", "0653499181", null],
+  ["The Pandora Phuket Co.,Ltd", "9/19 Soi Sukapiban5, Soi 57, Sub-Distric O Ngoen, Sai Mai Distric, Bangkok 10220", "0105564080881", null, null],
+  ["Bangtao Grand Limited", "390/1 Moo1, Srisoonthorn Rd, Cherngtalay, Thalang, Phuket 83110", "0105536135260", "076-362300", null],
+  ["TWR Holding Co.,Ltd.", "390/1 Moo1, Srisoonthorn Rd, Cherngtalay, Thalang Phuket 83110", "0105531043260", "076-362300", null],
+  ["Sunny DEV Group (Thailand) Co.,Ltd.", "96/75 Village No.1, Kathu Subdistrict, Kathu District, Phuket Province 83120", "0835566022190", null, null],
+  ["The Ozone Group Phuket Co.,Ltd", "88/88 Moo4, Tambol Chengtalay, Thalang Distric,Phuket 83110.", "0835565016226", null, null],
+  ["Botanica Foresta Co.,Ltd", "125/396 Moo5, Tambol Ratsada, Amphur Muang, Phuket 83000", "0835562007714", "0983947097", null],
+  ["Fantasea Plus Co.,Ltd", "178/25 Moo5, Choeng Thale Subdistric, Thalang Distric, Phuket 83110", "0835560001352", "0947097259", null],
+  ["The One Phuket Co.,Ltd", "71/43-44  Moo10, Tambol Chalong, Amphur Muang, Phuket 83130", "0835551011987", null, null],
+  ["Layan Best View Company Limited", "147 Moo6 Cherngtalay Sub-District, Thalang District, Phuket 83110", "0835564009196", "0639240169", null],
+  ["Plus Real Estate&Development Co.,Ltd", "48 Rajyindee Road, Tambol Hat yai, Amphur Hat yai, Songkla  90110", "0105553045494", null, null],
+  ["Ayana Phuket Co.,Ltd", "7 Moo 6, Cherng Talay Sub-District, Mueang Thalang, Phuket 83110", "0835566001001", null, null],
+  ["The Phuket Family Garden Co.,Ltd", "147 Moo6, Tambon Cherngtalay, Amphur Thalang, Phuket 83110", "0835563004301", null, null],
+  ["Andaman Boutique Residences Co.,Ltd", "331 Moo 2 , Cherngtalay, A. Thalang, Phuket 83110", "0835563002791", "0945869662", null],
+  ["Mr. Peresypkin Valerii", null, null, null, null],
+  ["Utopia Corporation Co.,Ltd (Head Office)", "888 Moo2,Rawai,Muang Phuket, Phuket 83130", "0835564005085", null, "Agent@utopia.co.th"],
+  ["The Riviera Monaco Property Development Co.,Ltd", "80/164 Moo9, Nongprue, Banglamung, Chonburi 20150", "0205561002714", "929835442", null],
+  ["Phuket Dot Net Co.,Ltd", "99/22 Moo1 Kathu, Kathu, Phuket 83210", "0835565012735", null, null],
+  ["Praytian 888 Phuket Co.,Ltd.", "88/88 Moo4, Tambol Chengtalay, Thalang District,Phuket 83110.", "0835566027132", null, null],
+  ["บริษัท ออริจิ้น คอนโด บางเทา 1 จำกัด", "496 หมู่ 9 ตำบล สำโรงเหนือ อำเภอเมืองสมุทรปราการ จังหวัดสมุทรปราการ", "0115566013430", "668 11394768", null],
+  ["GC Group 6389 Co.,Ltd ( Head Office )", "149/13 Moo 4, Srisoonthorn, Thalang Distric, Phuket 83110", "0835565015921", "098-0620888", null],
+  ["Good Team 888 Co.,Ltd. ( Head Office )", "4/2 Building A, 2nd floor, Room No.4, Srisoonthorn Rd, Cherng Talay, Thalang, Phuket 83110", "0835565016064", "098-0620888", null],
+  ["T.H GROUP COMPANY LIMITED", "16/89 หมู่ 2 ตำบลกะทู้ อำเภอกะทู้ จังหวัด ภูเก็ต 83120", "0835561010509", null, null],
+  ["The Ozone Kingdom Phuket Co.,Ltd", "88/88 Moo4, Cherngtalay Sub-District, Thalang District, Phiket 83110", "0835566040805", null, null],
+  ["K.J.S. Property Co.,Ltd", "352/185 Moo12, Tambon Nongprue, Amphur Banglamung, Chonburi 20150", "0205549031432", "064-3096503", null],
+  ["Riviera Malibu Property Development Co.,Ltd", "392/68 Moo.6 Naklue, Banglamung, Chomburi 20150", "0205563010501", "092-9835442", null],
+  ["Dusit High Tower Co.,Ltd ( Head Office )", "195/33 Moo.11 Nongprue, Banglamung, Chonburi 20150", "0205555010361", "038-231516", null],
+  ["S.L.R Development Co.,Ltd ( Head Office )", "391/21 Moo12, Nongprue, Banglamung, Chonburi 20150", "0205561042805", null, null],
+  ["Mr.Mardiyev Narzy", "Kazakhstan , Kostanay city,Kostanayskaya-4", "N11965377", "77078646666", null],
+  ["Udomo Thai Co.,Ltd", "71/44 ชั้น 1 ห้อง101 ตำบลฉลอง อำเภอเมืองภูเก็ต จังหวัด ภูเก็ต83130", "0835566023323", null, null],
+  ["Shuen Jit Co.,Ltd", "102/4 Moo 9, Naklua, Banglamung, Chonburi, Thailand 20150", "0205564010211", null, null],
+  ["Miss Larisa", null, null, null, null],
+  ["Capri Resident Co.,Ltd (Head Office)", "178/25 Moo5,Cherngtalay,Thalang, Phuket83110", "0835549003140", null, null],
+  ["The Riviera Luxury Development Co.,Ltd", "29/72 Moo12 Nongprue, Banglamung,Chonburi 20150", "0205556035286", "098-2879272", null],
+  ["AUTHAIKAM CO.,LTD", "83/87 Moo2, Rawai-Naiharn Road, Tambon Rawai, Amphoe Muang Phuket 83130", "0105553104521", null, null],
+  ["Copacabana Coral Reef Co,Ltd,(Head Office)", "385/16 Moo12, Nongprue, Banglamung, Chonburi 20150", "0205562035454", "098-742-7565", null],
+  ["Vega By Metrics Co.,Ltd", "9/111 Moo 4, Tambol Cherngtalay, Thalang, Phuket 83110", "0835565022811", "064-952-8777", null],
+  ["Origin Kata Phuket Co.,Ltd.", "496 Moo9, Tambol Samrong Nuea, Mueang Samutprakan, Samutprakarn 10270", "0115566015394", "065-9841907", null],
+  ["The City Phuket by World Corporation Co.,Ltd ( Head office )", "No. 10/1  Moo1, Kathu Sub-district, Kathu District, Phuket 83120", "0135557019986", "Mr. Yodmanut Chumsaratool", null],
+  ["Praytian 8 Phuket Co.,Ltd.", "88/88 Moo4, Tambol Chengtalay, Thalang District,Phuket 83110.", "0835565012387", null, null],
+  ["Knightsbridge & Partner (HK) Limited", "Unit 1501-02, 15 Floor, Fu Fai Commercial Centre, 27 Hillier Street,Sheung Wan,Hongkong", null, null, null],
+  ["Anatara Dragon Seseh Bali Resort & Residences", "The Promenade Jl,Shortcut Teratai-Batu Bolong No. P14, Canggu,Kuta-Utara,Badung,Bali, Indonesia", null, null, null],
+  ["AMAL PROPERTY CO.,LTD (Head Office)", "149/1 Moo4, Srisoonthorn Sub-District,Thalang District,Phuket 83110", "0835566023145", null, null],
+  ["Siamese Stone Developments Co.,Ltd.", "30th floor unit 30-02 Chartered Square Building, 152 North Sathorn Road,Silom,Bangrak,Bangok 10500", "0105565203529", null, null],
+  ["Happy Series Ville Co.,Ltd.", "338/110 Moo 12,Nongprue, Banglamung, Chonburi, 20150 Thailand", "0205548016448", null, null],
+  ["A one property Co.,Ltd (Head Office)", "47/2-47/5 Baandon-Cherngtalay,Cherngtalay Sub-District,Thalang District,Phuket Thailand 83110", "0835556006728", null, null],
+  ["บริษัท 33 โปร จำกัด", "90 ถนน วัชรพล แขวงท่าแร้ง เขตบางเขน กรุงเทพมหานคร 10230", "0105561169628", null, null],
+  ["Universal Star Developments Co.,Ltd", "391/34 Moo12,Nongprue, Banglamung,Chonburi 20150", "0205557009092", "038-181946", null],
+  ["Riviera Santa Monica Property Development Co.,Ltd", "392/68 Moo6, Naklue, Banglamung, Chonburi 20150", "0205567062808", "038-195253", null],
+  ["บริษัท เทพทิพย์ธนาธร จำกัด", "59 หมู่ที่1 ตำบลไม้ขาว อำเภอถลาง จังหวัดภูเก็ต 83110", "0835562001775", null, null],
+  ["The Element BY Anocha Co.,Ltd.", "9/258 Moo6, Kamala, Kathu, Phuket 83120", "0835567032385", "080-5343354", null],
+  ["Kamala Beach Resort&Hotel Management", "167 Phibulsongkhram Rd,Sauan Yai,Muang,Nonthaburi,11000 Thailand", "0105550061821", "090-2579967", null],
+  ["Aster of Asia Co.,Ltd.", "63/202 Moo2, Koh Kaew, Muang, Phuket, Thailand 83000", "0835566006003", "097-7830676", null],
+  ["Boavista Lifestye Residences Co.,Ltd", "22 Soi Somkid ,Ploen Chit Road, Lumpini, Pathumwan, Bangkok 10330 Thailand", "0105566125190", null, null],
+  ["N8 VIP (THAILAND) Co.,Ltd", "83/87 Moo2,Tambon Rawai, Amphur Muang, Phuket 83130", "0835562019631", null, null],
+  ["Origin Cherngtalay Phuket Co.,Ltd.", "496 Moo9, Tambol Samrong Nuea, Mueang Samutprakan, Samutprakarn 10270", "0115566024202", null, null],
+  ["Bestart Heaven Co.,Ltd", "28/40 Moo4,Sakhu, Thalang, Phuket 83110", "0105562067705", null, null],
+  ["Title Estate 1 Co.,Ltd", "234/5 Moo5, Tambon Sakhu, Amphur Thalang, Phuket 83110", "0835567030552", null, null],
+  ["TBC OCEAN VILLA CO.,LTD", "445/547-9 Moo12,Nongprue,Banglamung, Chonburi 20150", "020556017647", null, null],
+  ["JWP02 Management Co.,Ltd", "No. 8/5 2nd floor,Sukhumvit 16(Sammitr) Klong Toei Sub-District, Klong Toei District,Bangkok,Thailand 10110", "0105561151346", null, null],
+  ["Garden Properties Developement Co.,Ltd", "89/3 Moo7, Tambon Rawai, Amphur Muang, Phuket 83130", "0835559014012", null, null],
+  ["บริษัท ไตรนิตี้ พรอพเพอร์ตี้ จำกัด (สำนักงานใหญ่)", "59/90 หมู่4 ตำบลกะทู้ อำเภอกะทู้ จังหวัด ภูเก็ต 83120", "0835562016241", "083-1020700", null],
+  ["Udomo Phuket Co.,Ltd", "71/43, 1st floor, Room 101, Moo10, Chalong Subdistrict, Muang Phuket, Phuket  83130", "0835560006715", null, null],
+  ["The One Trading Co.,Ltd", "3/24 Moo1, Rawai Sub-District, Muang Phuket District,Phuket 83130", "0835564002591", null, null],
+  ["บริษัท ฌาน พรอพเพอร์ติ้ จำกัด", "8/8 ถนน เฉลิมพระเกียรติ ร 9 ตำบล วิชิต อำเภอ เมือง จังหวัด ภูเก็ต 83000", "0835566000315", null, null],
+  ["นายพศุตม์ บรรยงพงศ์เลิศ", "97/33 ถนน พระภูเก็ตแก้ว ตำบล กะทู้  อำเภอ กะทู้ จังหวัด ภูเก็ต 83120", null, null, null],
+  ["Sun Hills Co.,Ltd", "4/4 Srisoonthorn Road, Cheng Talay Subdistrict,Thalang District, Phuket83110", "0835566010671", null, null],
+  ["Riviera Beverly Hills Residences Co.,Ltd", "392/68 Moo6, Naklue,Banglamung,Chonburi 20130", "0205552014471", null, null],
+  ["Joint Venture Fantasea Chalong Corperation Co., Ltd.", "178/25 Moo 5, Cherngtalay, Thalang, Phuket 83110 (Head office)", "0835567002834", null, null],
+  ["บริษัท ดิวัน ออร่า จำกัด", "71/42 Moo10,Chalong Sub-District,Amphur Muang Phuket,Phuket 83130", "0835566041534", null, null],
+  ["Princess Villa Co.,Ltd.(Head Office)", "5/50 The Plaza Surin, Moo3, Cherngthalay Sub-District, Thalang District,Phuket 83110", "0835547000313", "098-1499662", null],
+  ["Love Rawai Travel Co.,Ltd.", "58/150 Moo.6, Tambon Rawaim Amphur Muang, Phuket 83130", "0835562009211", null, null],
+  ["Miss Metinee Boonratanaamorn", "61/56 Soi Sukhumvit 1(shuenrudee), Klongtoen Nua Sub-District,Watana District,Bangkok", "3440600556329", null, null],
+  ["Yossapak Company Limited", "59 Soi Rim Khlong Phra Khanong, Phra Khanong Nuea Sub-District, Vadhana District, Bangkok, 10110 Thailand", "0105567040180", "085-5616365", "khe.an@sansiri.com"],
+  ["Laguna Grande Limited", "390/1 Moo 1, Srisoonthorn Road, Cherngtalay, Thalang, Phuket 83110 Thailand", "0105531013468", "(0)76 362 333", "property@lagunaproperty.com"],
+  ["Global Asset Limited", "Unit Level 9F(2),Main Office,Financial Park Labuan, Jalan Merdeka 87000,Federal Territory of Labuan,Malaysia", null, null, null],
+  ["Angel Real Estate Consultancy Co., Ltd. (Head Office)", "383 Room 201 Floor 2, Soi Soonvijai 4(Rama 9 Soi 13) Rama 9 Road, Bangkapi, Huay Kwang, Bagkok 10310 Thailand", "0105558007990", "062-727-8227", null],
+  ["THE EMBS LIFE CO.,LTD", "13/84 Moo12,Nongprue,Banglamung District, Chonburi 20150", "0205567016725", null, null],
+  ["Coda Co.,Ltd", "4/2 Srisunthon Road,Chengtalay Subdistrict,Thalang District,Phuket 83110", "0835567011442", null, null],
+  ["South Point Group Co. Ltd", "59/306, 2nd Floor, Room No. 1, Moo 7, Rawai Sub-district, Mueang Phuket District", "0835566035127", null, null],
+  ["Wise Estate 20 Co.,Ltd", "เลขที่ 9 ตรอก/ซอย รามอินทรา 5 แยก 23 แขวง อนุสาวรีย์ เขต บางเขน กรุงเทพมหานคร 10220", "0105566136442", "02-1680000", null],
+  ["Synchro Layan Co.,Ltd.", "66/2 Moo 3, Tambon Cherngtalay, Thalang, Phuket 83110", "0835566037588", null, null],
+  ["Dominio House Co.,Ltd", "20/1 Moo5 Tambon Choeng Thale, Amphur Thalang, Phuket 83110", "083556611694", null, null],
+  ["Layan Green Park Company Limited", "147/254 Мoо 6, Tambon Cherngtalay, Amphur Thalang, Phuket 83110, Thailand", "0835562015261", null, null],
+  ["Botanica Modern Loft II Co., Ltd.", "123/396 Moo 5, Ratsada Sub-district, Muang Phuket District, Phuket 83000, Thailand", "083565024091", null, null],
+  ["AMAL DEVELOPMENT CO., Ltd.", "149/1 Moo4, Srisoonthorn Sub-District,Thalang District,Phuket 83110", "0835566019351", null, null],
+  ["Pattra House and Property Public Company Limited", "111 Moo 7, Nonthaburi-Pathumthani Road, Mueang, Pathumthani 12000, Thailand", "0107548000188", null, null],
+  ["Botanica The Nature Co., Ltd.", "199/9 Moo 4, Thepkrasattri Subdistrict, Thalang District, Phuket 83110", "0835561019981", null, null],
+  ["ENVISION (THAILAND) CO., LTD", "367/85, Yaowarat Road, Talad Yai, Muang Phuket, Phuket, 83000 Thailand", "0835566033124", null, null],
+  ["PERFECT TEAM 999 CO., LTD.", "149/13 Moo 4, Si Sunthon Sub-district, Thalang District, Phuket Province, 83110 Thailand", "0835565023265", null, null],
+  ["Wallaya Villas Development Co., Ltd.", "13/105 Moo. 4, Srisoontorn Sub-District, Thalang District, Phuket 83110", "0835564009790", null, null],
+  ["Zero Developments Co., Ltd.", "123/24-25, MOO 5, CHOENG THALE, THALANG, PHUKET 83110", "0835566045831", null, null],
+  ["Serene Layan Co.,Ltd", "66/2 Moo3, Tambon Cherngtalay, Thalang, Phuket 83110", "0835566037588", null, null],
+  ["Phuripas Company Limited", "59 Soi Rim Khlong Phra Khanong, Phra Khanong Nuea, Vadhana, Bangkok 10110", "0105567152638", null, null],
+  ["Sansiri PLC.", "59 Soi Rim Khlong Phra Khanong, Phra Khanong Nuea, Vadhana, Bangkok 10110", "0107538000665", null, null],
+  ["ESM Development Co.,Ltd", "110/1 Prabaramee Rd, T. Patong, A.Kathu, Phuket 83150", "0835559002251", null, null],
+  ["Phuket Grande Resort Limited", "390/1 Moo 1, Srisoonthorn Road, Cherngtalay, Phuket 83110, Thailand", "0105526027138", null, null],
+  ["Tranio Global Real Estate L.L.C.", "No304-1,owned by Musbah Rashid Musbah Al Fattan Al Falsi,Al Satwa,Dubai,UAE", "100520703800003", null, null],
+  ["Ever Prime Development Co.", "9/258 Moo 6, T. Kamala, A. Kathu, 83150, Phuket, Thailand", "0835568010199", null, null],
+  ["Tonsai Co.,Ltd", "20/43 ถนน แม่หลวน ตำบล ตลาดเหนือ อำเภอ เมือง จังหวัดภูเก็ต 83000", "0835566000625", null, null],
+  ["Origin Condo Bangtao2 Co.,Ltd", "496 Moo9,Samrong Nua, Mueang Samut Prakan,Samut Prakan Province 10270", "0115566013448", null, null],
+  ["PT. LOYO GROUP BALI", "Benoa, Kec. Kuta Sel., Kabupaten Badung, Bali 80361", "50.075.629.1-907.000", null, null],
+  ["Vega by Sun Hills CO., LTD", "9/111 Moo. 4, Cherng Talay subdistrict, Thalang district, Phuket 83110", "0835565022811", null, null],
+  ["SIRINPAK 1 CO.,LTD.", "59 Soi Rim Khlong Phra Khanong, Phra Khanong Nuea, Vadhana, Bangkok 10110, Thailand", "0105569008640", null, null],
+  ["IB GROUP INCORPORATED", "No.416,Burlington Tower, Business Bay, P.O.Box487644 Dubai United Arab Emirates", "ICC20230904", null, null],
+  ["Rise Development Co.,Ltd", "123/159 Moo2, Tambon Kohkeaw, Amphur Muang, Phuket 83000", "0835568016901", null, null],
+  ["Red Leaf 68 Co., Ltd. (Head Office)", "149/13 Moo. 4 Si Sunthon Subdistrict, Thalang District, Phuket 83110", "0835567032831", null, null],
+  ["Andaman Asset Solution Co.,Ltd", "141/4 Baandon-Choengtalay Road, Phuket 83110", "0835563011928", null, null],
+  ["Dream Team 88 Co.,Ltd.", "149/13 Moo. 4 Si Sunthon Subdistrict, Thalang District, Phuket 83110", "0835567027292", null, null],
+  ["Amal Establishment Co.,Ltd.", "149/1 Moo4, Srisoonthorn Sub-District, Thalang District, Phuket 83110", "0835567023823", null, null],
+  ["Capstone Asset Phuket Cherngtalay Co.,Ltd", "546 Canvas Ploenchit Building, Ploenchit Road, Lumpini Subdistrict, Pathumwan District, Bangkok 10330", "0105566213897", null, null],
+  ["Lazudi Co.,Ltd ( Head Office )", "283/93 Homeplace office building, 18th floor, Soi Sukhumvit 55, Sukhumvit Road, Klongtan Nua,Wattana, Bangkok 10110 Thailand", "0105562087315", null, null],
+  ["บริษัท อาณาวรรธน์ จำกัด", "59 ซอยริมคลองพระโขนง แขวงพระโขนงเหนือ เขตวัฒนา กรุงเทพมหานคร", "0105546144865", null, null],
+];
+
+export const seedCounterparties: SeedCounterparty[] = rows.map(([name, address, taxId, phone, email]) => ({
+  name,
+  address,
+  taxId,
+  phone,
+  email,
+  preferredLanguage: lang(name),
+}));
