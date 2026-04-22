@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { requireAdminAccess } from "@/lib/auth-helpers";
 
 const counterpartySchema = z.object({
   name: z.string().min(1, "Required").max(200),
@@ -22,7 +22,7 @@ export type CounterpartyFormValues = z.infer<typeof counterpartySchema>;
 type Result = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createCounterparty(rawValues: unknown): Promise<Result> {
-  await requireSuperAdmin();
+  await requireAdminAccess();
   const parsed = counterpartySchema.safeParse(rawValues);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
@@ -48,7 +48,7 @@ export async function updateCounterparty(
   id: string,
   rawValues: unknown,
 ): Promise<Result> {
-  await requireSuperAdmin();
+  await requireAdminAccess();
   const parsed = counterpartySchema.safeParse(rawValues);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
@@ -73,7 +73,7 @@ export async function updateCounterparty(
 }
 
 export async function deleteCounterparty(id: string) {
-  await requireSuperAdmin();
+  await requireAdminAccess();
   const hasInvoices = await prisma.invoice.count({ where: { counterpartyId: id } });
   if (hasInvoices > 0) {
     // Soft delete — set isActive=false if there are linked invoices

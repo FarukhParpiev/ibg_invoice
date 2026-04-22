@@ -63,23 +63,29 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="border rounded-lg p-6 bg-zinc-50">
-        <h2 className="font-medium mb-2">Next steps</h2>
+        <h2 className="font-medium mb-2">Quick actions</h2>
         <ul className="text-sm text-zinc-700 list-disc pl-5 space-y-1">
           <li>
-            Edit{" "}
-            <Link href="/admin/companies" className="underline">
-              our 9 companies
-            </Link>{" "}
-            — upload logos (by URL), refine details.
+            Create a new{" "}
+            <Link href="/admin/invoices/new" className="underline">
+              invoice
+            </Link>
+            .
           </li>
           <li>
-            Add{" "}
-            <Link href="/admin/counterparties" className="underline">
-              counterparties
-            </Link>{" "}
-            — can be done gradually, from the old spreadsheet.
+            Add a{" "}
+            <Link href="/admin/counterparties/new" className="underline">
+              counterparty
+            </Link>
+            .
           </li>
-          <li>Stage 2 — invoice creation (in progress).</li>
+          <li>
+            Review recent{" "}
+            <Link href="/admin/receipts" className="underline">
+              receipts
+            </Link>
+            .
+          </li>
         </ul>
       </div>
     </div>

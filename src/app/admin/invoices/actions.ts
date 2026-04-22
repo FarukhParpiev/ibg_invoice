@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { requireAdminAccess } from "@/lib/auth-helpers";
 import {
   calcTotals,
   calcItemAmount,
@@ -206,7 +206,7 @@ function buildItemsCreate(
 // ────────────────────────────── Create/Edit ──────────────────────────────
 
 export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
   const parsed = invoiceSchema.safeParse(rawValues);
   if (!parsed.success) {
     return {
@@ -309,7 +309,7 @@ export async function updateDraftInvoice(
   id: string,
   rawValues: unknown,
 ): Promise<Result> {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
   const parsed = invoiceSchema.safeParse(rawValues);
   if (!parsed.success) {
     return {
@@ -415,7 +415,7 @@ export async function updateDraftInvoice(
 // ────────────────────────────── Transitions ──────────────────────────────
 
 export async function issueInvoice(id: string): Promise<Result> {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
 
   // Up to 3 attempts in case of a race on unique(serialNumber)
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -478,7 +478,7 @@ export async function payInvoice(
   id: string,
   paidAtIso: string,
 ): Promise<Result> {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
 
   const paidAt = parseDateOrNull(paidAtIso);
   if (!paidAt) return { ok: false, error: "Invalid payment date" };
@@ -616,7 +616,7 @@ export async function cancelInvoice(
   id: string,
   reason: string,
 ): Promise<Result> {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
   const inv = await prisma.invoice.findUnique({ where: { id } });
   if (!inv) return { ok: false, error: "Invoice not found" };
   if (inv.status === "cancelled") {
@@ -659,7 +659,7 @@ export async function cancelInvoice(
 }
 
 export async function deleteDraftInvoice(id: string) {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
   const inv = await prisma.invoice.findUnique({ where: { id } });
   if (!inv) return;
   if (inv.status !== "draft") {
@@ -679,7 +679,7 @@ export async function deleteDraftInvoice(id: string) {
 // ────────────────────────────── Duplicate ──────────────────────────────
 
 export async function duplicateInvoice(id: string): Promise<Result> {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
   const src = await prisma.invoice.findUnique({
     where: { id },
     include: { items: { orderBy: { positionNo: "asc" } } },

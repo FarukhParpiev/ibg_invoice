@@ -2,7 +2,7 @@
 // Requires super_admin.
 
 import { NextResponse } from "next/server";
-import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { requireAdminAccess } from "@/lib/auth-helpers";
 import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
 import { revalidatePath } from "next/cache";
 
@@ -15,7 +15,7 @@ export async function POST(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
   const { id } = await ctx.params;
 
   try {

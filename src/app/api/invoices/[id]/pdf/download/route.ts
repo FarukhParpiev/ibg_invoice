@@ -9,7 +9,7 @@
 import { NextResponse } from "next/server";
 import { get } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
-import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { requireAdminAccess } from "@/lib/auth-helpers";
 import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
 
 export const runtime = "nodejs";
@@ -19,7 +19,7 @@ export async function GET(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
   const { id } = await ctx.params;
 
   const inv = await prisma.invoice.findUnique({
