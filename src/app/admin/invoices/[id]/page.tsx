@@ -65,7 +65,7 @@ export default async function InvoiceDetailPage(
           href="/admin/invoices"
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К списку
+          ← Back to list
         </Link>
         <div className="flex items-baseline gap-3 mt-2 flex-wrap">
           <h1 className="text-2xl font-semibold">
@@ -93,13 +93,13 @@ export default async function InvoiceDetailPage(
 
       {flashError && (
         <div className="text-sm rounded bg-red-50 text-red-700 px-3 py-2">
-          Редактирование доступно только для статуса draft.
+          Editing is only available for draft status.
         </div>
       )}
 
       {invoice.parentInvoice && (
         <div className="text-sm rounded bg-zinc-50 px-3 py-2">
-          Receipt к инвойсу{" "}
+          Receipt for invoice{" "}
           <Link
             href={`/admin/invoices/${invoice.parentInvoice.id}`}
             className="underline font-mono"
@@ -143,7 +143,7 @@ export default async function InvoiceDetailPage(
       </div>
 
       <section className="grid grid-cols-2 gap-4">
-        <Card title="Наша компания">
+        <Card title="Our company">
           <div className="font-medium">{invoice.ourCompany.name}</div>
           {invoice.ourCompany.address && (
             <div className="text-zinc-600 whitespace-pre-line">
@@ -155,7 +155,7 @@ export default async function InvoiceDetailPage(
           )}
         </Card>
 
-        <Card title="Контрагент">
+        <Card title="Counterparty">
           <div className="font-medium">{invoice.counterparty.name}</div>
           {invoice.counterparty.address && (
             <div className="text-zinc-600 whitespace-pre-line">
@@ -169,7 +169,7 @@ export default async function InvoiceDetailPage(
           )}
         </Card>
 
-        <Card title="Банковский счёт">
+        <Card title="Bank account">
           <div className="font-medium">{invoice.ourBankAccount.bankName}</div>
           <div className="text-zinc-600">
             {invoice.ourBankAccount.accountName} —{" "}
@@ -182,7 +182,7 @@ export default async function InvoiceDetailPage(
           </div>
         </Card>
 
-        <Card title="Даты и условия">
+        <Card title="Dates & terms">
           <Row label="Issue date" value={invoice.issueDate.toISOString().slice(0, 10)} />
           {invoice.dueDate && (
             <Row label="Due date" value={invoice.dueDate.toISOString().slice(0, 10)} />
@@ -209,7 +209,7 @@ export default async function InvoiceDetailPage(
                 value={invoice.cancelledAt.toISOString().slice(0, 10)}
               />
               {invoice.cancelledReason && (
-                <Row label="Причина" value={invoice.cancelledReason} />
+                <Row label="Reason" value={invoice.cancelledReason} />
               )}
             </>
           )}
@@ -221,10 +221,10 @@ export default async function InvoiceDetailPage(
           <thead className="bg-zinc-50 text-zinc-600">
             <tr>
               <th className="text-left px-4 py-3 font-medium">#</th>
-              <th className="text-left px-4 py-3 font-medium">Тип</th>
-              <th className="text-left px-4 py-3 font-medium">Проект/Unit</th>
-              <th className="text-left px-4 py-3 font-medium">Детали</th>
-              <th className="text-right px-4 py-3 font-medium">Сумма</th>
+              <th className="text-left px-4 py-3 font-medium">Type</th>
+              <th className="text-left px-4 py-3 font-medium">Project/Unit</th>
+              <th className="text-left px-4 py-3 font-medium">Details</th>
+              <th className="text-right px-4 py-3 font-medium">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -282,7 +282,7 @@ export default async function InvoiceDetailPage(
         <Row label="Subtotal" value={`${fmt(invoice.subtotal)} ${invoice.primaryCurrency}`} />
         {invoice.vatApplied && (
           <Row
-            label={invoice.vatIncluded ? "VAT 7% (включён в сумму)" : "VAT 7%"}
+            label={invoice.vatIncluded ? "VAT 7% (included in amount)" : "VAT 7%"}
             value={`${fmt(invoice.vatAmount)} ${invoice.primaryCurrency}`}
           />
         )}
@@ -303,7 +303,7 @@ export default async function InvoiceDetailPage(
             <Row label="Total USD" value={`${fmt(invoice.totalUsd)} USD`} />
             {invoice.exchangeRate && (
               <div className="text-xs text-zinc-400 text-right mt-1">
-                курс {fmt(invoice.exchangeRate)} ·{" "}
+                rate {fmt(invoice.exchangeRate)} ·{" "}
                 {invoice.exchangeRateSource ?? "—"}
               </div>
             )}
@@ -313,7 +313,7 @@ export default async function InvoiceDetailPage(
 
       {invoice.notesText && (
         <section className="border rounded-lg p-5 bg-white">
-          <h2 className="font-medium mb-2">Заметки</h2>
+          <h2 className="font-medium mb-2">Notes</h2>
           <p className="text-sm text-zinc-700 whitespace-pre-line">
             {invoice.notesText}
           </p>
@@ -322,15 +322,15 @@ export default async function InvoiceDetailPage(
 
       <section className="text-xs text-zinc-500 border-t pt-4 space-y-1">
         <div>
-          Создано: {invoice.createdAt.toISOString().slice(0, 16).replace("T", " ")}{" "}
+          Created: {invoice.createdAt.toISOString().slice(0, 16).replace("T", " ")}{" "}
           · {invoice.createdBy.email}
         </div>
         {invoice.issuedBy && (
-          <div>Выпущено: {invoice.issuedBy.email}</div>
+          <div>Issued by: {invoice.issuedBy.email}</div>
         )}
-        {invoice.paidByUser && <div>Оплата принята: {invoice.paidByUser.email}</div>}
+        {invoice.paidByUser && <div>Marked paid by: {invoice.paidByUser.email}</div>}
         {invoice.cancelledByUser && (
-          <div>Отменил: {invoice.cancelledByUser.email}</div>
+          <div>Cancelled by: {invoice.cancelledByUser.email}</div>
         )}
       </section>
     </div>

@@ -52,22 +52,22 @@ export default async function InvoicesListPage(
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Инвойсы</h1>
+          <h1 className="text-2xl font-semibold">Invoices</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Все инвойсы + автосозданные receipt'ы.
+            All invoices + auto-generated receipts.
           </p>
         </div>
         <Link
           href="/admin/invoices/new"
           className="bg-black text-white rounded px-4 py-2 text-sm hover:bg-zinc-800"
         >
-          + Новый инвойс
+          + New invoice
         </Link>
       </div>
 
       {flashDeleted && (
         <div className="text-sm rounded bg-zinc-100 px-3 py-2">
-          Draft удалён.
+          Draft deleted.
         </div>
       )}
 
@@ -75,7 +75,7 @@ export default async function InvoicesListPage(
         <FilterChip
           href="/admin/invoices"
           active={statusFilter === null && typeFilter === null}
-          label={`Все · ${Object.values(countMap).reduce((s, n) => s + n, 0)}`}
+          label={`All · ${Object.values(countMap).reduce((s, n) => s + n, 0)}`}
         />
         {(["draft", "issued", "paid", "cancelled"] as InvoiceStatus[]).map(
           (s) => (
@@ -98,19 +98,19 @@ export default async function InvoicesListPage(
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-600">
             <tr>
-              <th className="text-left px-4 py-3 font-medium">№</th>
-              <th className="text-left px-4 py-3 font-medium">Дата</th>
-              <th className="text-left px-4 py-3 font-medium">Компания</th>
-              <th className="text-left px-4 py-3 font-medium">Контрагент</th>
-              <th className="text-right px-4 py-3 font-medium">Сумма</th>
-              <th className="text-left px-4 py-3 font-medium">Статус</th>
+              <th className="text-left px-4 py-3 font-medium">No.</th>
+              <th className="text-left px-4 py-3 font-medium">Date</th>
+              <th className="text-left px-4 py-3 font-medium">Company</th>
+              <th className="text-left px-4 py-3 font-medium">Counterparty</th>
+              <th className="text-right px-4 py-3 font-medium">Amount</th>
+              <th className="text-left px-4 py-3 font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
             {invoices.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-zinc-500">
-                  Нет инвойсов.
+                  No invoices.
                 </td>
               </tr>
             ) : (
@@ -172,7 +172,7 @@ export default async function InvoicesListPage(
 
       {invoices.length === 100 && (
         <p className="text-xs text-zinc-500">
-          Показаны первые 100. Добавим пагинацию позже.
+          Showing first 100. Pagination to be added later.
         </p>
       )}
     </div>

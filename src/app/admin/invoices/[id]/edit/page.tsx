@@ -109,9 +109,9 @@ export default async function EditInvoicePage(
           href={`/admin/invoices/${id}`}
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К инвойсу
+          ← Back to invoice
         </Link>
-        <h1 className="text-2xl font-semibold mt-2">Редактирование draft</h1>
+        <h1 className="text-2xl font-semibold mt-2">Edit draft</h1>
       </div>
 
       <InvoiceForm

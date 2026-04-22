@@ -1,14 +1,14 @@
-// POST /api/invoices/[id]/pdf — регенерирует PDF и возвращает ссылку.
-// Требует super_admin.
+// POST /api/invoices/[id]/pdf — regenerates the PDF and returns its link.
+// Requires super_admin.
 
 import { NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
 import { revalidatePath } from "next/cache";
 
-// Puppeteer не должен запускаться в edge — принудительно nodejs runtime.
+// Puppeteer must not run on the edge — force nodejs runtime.
 export const runtime = "nodejs";
-// PDF-рендеринг может занять время — поднимаем лимит для Vercel.
+// PDF rendering can take a while — raise the Vercel limit.
 export const maxDuration = 60;
 
 export async function POST(
@@ -23,7 +23,8 @@ export async function POST(
     revalidatePath(`/admin/invoices/${id}`);
     return NextResponse.json({ ok: true, url: res.url, size: res.size });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Ошибка генерации PDF";
+    const message =
+      err instanceof Error ? err.message : "Failed to generate PDF";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

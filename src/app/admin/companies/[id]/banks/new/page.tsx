@@ -19,9 +19,9 @@ export default async function NewBankAccountPage(
           href={`/admin/companies/${company.id}`}
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К {company.name}
+          ← Back to {company.name}
         </Link>
-        <h1 className="text-2xl font-semibold mt-2">Новый банковский счёт</h1>
+        <h1 className="text-2xl font-semibold mt-2">New bank account</h1>
       </div>
 
       <BankAccountForm mode={{ kind: "create", companyId: company.id }} />

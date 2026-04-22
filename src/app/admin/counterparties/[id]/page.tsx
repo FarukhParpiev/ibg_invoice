@@ -21,12 +21,12 @@ export default async function EditCounterpartyPage(
           href="/admin/counterparties"
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К списку
+          ← Back to list
         </Link>
         <div className="flex items-baseline gap-4 mt-2">
           <h1 className="text-2xl font-semibold">{cp.name}</h1>
           <span className="text-sm text-zinc-500">
-            {cp._count.invoices} инвойс(ов)
+            {cp._count.invoices} invoice(s)
           </span>
         </div>
       </div>

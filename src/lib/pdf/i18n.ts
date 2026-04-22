@@ -1,4 +1,4 @@
-// Тексты для PDF-инвойсов. Язык определяется по counterparty.preferredLanguage.
+// Text strings for PDF invoices. Language is picked from counterparty.preferredLanguage.
 
 export type PdfLang = "en" | "th" | "ru";
 
@@ -22,7 +22,7 @@ type Dict = {
   sellingPrice: string;
   subtotal: string;
   vat: string;
-  vatIncluded: string; // суффикс к VAT, если налог уже в сумме позиций
+  vatIncluded: string; // suffix to VAT when the tax is already embedded in line amounts
   wht: string;
   total: string;
   totalUsdEquivalent: string;

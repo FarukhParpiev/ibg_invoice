@@ -8,8 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const schema = z.object({
-  email: z.string().email("Некорректный e-mail"),
-  password: z.string().min(6, "Минимум 6 символов"),
+  email: z.string().email("Invalid e-mail"),
+  password: z.string().min(6, "Minimum 6 characters"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -36,7 +36,7 @@ export default function LoginForm() {
     });
 
     if (res?.error) {
-      setError("Неверный e-mail или пароль");
+      setError("Invalid e-mail or password");
       return;
     }
 
@@ -61,7 +61,7 @@ export default function LoginForm() {
       </label>
 
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-zinc-700">Пароль</span>
+        <span className="text-zinc-700">Password</span>
         <input
           type="password"
           autoComplete="current-password"
@@ -86,7 +86,7 @@ export default function LoginForm() {
         disabled={isSubmitting}
         className="bg-black text-white rounded py-2.5 mt-2 hover:bg-zinc-800 disabled:opacity-50"
       >
-        {isSubmitting ? "Вход…" : "Войти"}
+        {isSubmitting ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );

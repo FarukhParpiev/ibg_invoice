@@ -28,7 +28,7 @@ export function CompanyEditForm({
     startTransition(async () => {
       const res = await updateCompany(id, values);
       if (res.ok) {
-        setMessage({ kind: "ok", text: "Сохранено" });
+        setMessage({ kind: "ok", text: "Saved" });
         reset(values);
       } else {
         setMessage({ kind: "error", text: res.error });
@@ -42,21 +42,21 @@ export function CompanyEditForm({
       className="border rounded-lg p-6 space-y-5 bg-white"
     >
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Название" error={errors.name?.message} wide>
+        <Field label="Name" error={errors.name?.message} wide>
           <input
             className="input"
-            {...register("name", { required: "Обязательное поле" })}
+            {...register("name", { required: "Required" })}
           />
         </Field>
 
-        <Field label="Юр. тип">
+        <Field label="Legal type">
           <select className="input" {...register("legalType")}>
-            <option value="resident">Resident (Таиланд)</option>
+            <option value="resident">Resident (Thailand)</option>
             <option value="offshore">Offshore</option>
           </select>
         </Field>
 
-        <Field label="Валюта по умолчанию">
+        <Field label="Default currency">
           <select className="input" {...register("defaultCurrency")}>
             <option value="THB">THB</option>
             <option value="USD">USD</option>
@@ -73,7 +73,7 @@ export function CompanyEditForm({
           <input className="input" {...register("registrationNo")} />
         </Field>
 
-        <Field label="Телефон" error={errors.phone?.message}>
+        <Field label="Phone" error={errors.phone?.message}>
           <input className="input" {...register("phone")} />
         </Field>
 
@@ -81,7 +81,7 @@ export function CompanyEditForm({
           <input type="email" className="input" {...register("email")} />
         </Field>
 
-        <Field label="Адрес" error={errors.address?.message} wide>
+        <Field label="Address" error={errors.address?.message} wide>
           <textarea
             rows={2}
             className="input resize-y"
@@ -91,7 +91,7 @@ export function CompanyEditForm({
 
         <label className="col-span-2 flex items-center gap-2 text-sm">
           <input type="checkbox" {...register("isActive")} />
-          <span>Активна (отображается при выборе в инвойсе)</span>
+          <span>Active (shown when selecting on an invoice)</span>
         </label>
       </div>
 
@@ -113,7 +113,7 @@ export function CompanyEditForm({
           disabled={isPending || !isDirty}
           className="bg-black text-white rounded px-4 py-2 hover:bg-zinc-800 disabled:opacity-40"
         >
-          {isPending ? "Сохранение…" : "Сохранить"}
+          {isPending ? "Saving…" : "Save"}
         </button>
         <button
           type="button"
@@ -124,7 +124,7 @@ export function CompanyEditForm({
           }}
           className="rounded px-4 py-2 border hover:bg-zinc-50 disabled:opacity-40"
         >
-          Отменить
+          Cancel
         </button>
       </div>
 

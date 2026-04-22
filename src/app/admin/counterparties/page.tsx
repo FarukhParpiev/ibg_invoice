@@ -40,27 +40,27 @@ export default async function CounterpartiesListPage(
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Контрагенты</h1>
+          <h1 className="text-2xl font-semibold">Counterparties</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            {totalActive} активных из {totalAll} всего.
+            {totalActive} active out of {totalAll} total.
           </p>
         </div>
         <Link
           href="/admin/counterparties/new"
           className="bg-black text-white rounded px-4 py-2 text-sm hover:bg-zinc-800"
         >
-          + Новый контрагент
+          + New counterparty
         </Link>
       </div>
 
       {flashDeleted && (
         <div className="text-sm rounded bg-zinc-100 px-3 py-2">
-          Контрагент удалён.
+          Counterparty deleted.
         </div>
       )}
       {flashArchived && (
         <div className="text-sm rounded bg-yellow-50 text-yellow-800 px-3 py-2">
-          У контрагента есть инвойсы, поэтому он был скрыт (soft-delete), а не удалён.
+          The counterparty has invoices, so it was hidden (soft-delete) rather than deleted.
         </div>
       )}
 
@@ -74,7 +74,7 @@ export default async function CounterpartiesListPage(
           }
           className="text-sm text-zinc-600 hover:text-black whitespace-nowrap"
         >
-          {showArchived ? "Только активные" : "Показать все"}
+          {showArchived ? "Active only" : "Show all"}
         </Link>
       </div>
 
@@ -82,11 +82,11 @@ export default async function CounterpartiesListPage(
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-600">
             <tr>
-              <th className="text-left px-4 py-3 font-medium">Название</th>
-              <th className="text-left px-4 py-3 font-medium">Язык</th>
+              <th className="text-left px-4 py-3 font-medium">Name</th>
+              <th className="text-left px-4 py-3 font-medium">Language</th>
               <th className="text-left px-4 py-3 font-medium">E-mail</th>
-              <th className="text-left px-4 py-3 font-medium">Инвойсов</th>
-              <th className="text-left px-4 py-3 font-medium">Статус</th>
+              <th className="text-left px-4 py-3 font-medium">Invoices</th>
+              <th className="text-left px-4 py-3 font-medium">Status</th>
               <th className="text-right px-4 py-3 font-medium" />
             </tr>
           </thead>
@@ -95,8 +95,8 @@ export default async function CounterpartiesListPage(
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
                   {q
-                    ? "Ничего не найдено."
-                    : "Пока нет контрагентов. Создайте первого."}
+                    ? "Nothing found."
+                    : "No counterparties yet. Create the first one."}
                 </td>
               </tr>
             ) : (
@@ -112,9 +112,9 @@ export default async function CounterpartiesListPage(
                   </td>
                   <td className="px-4 py-3">
                     {c.isActive ? (
-                      <span className="text-green-700 text-xs">● активен</span>
+                      <span className="text-green-700 text-xs">● active</span>
                     ) : (
-                      <span className="text-zinc-400 text-xs">○ скрыт</span>
+                      <span className="text-zinc-400 text-xs">○ hidden</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -122,7 +122,7 @@ export default async function CounterpartiesListPage(
                       href={`/admin/counterparties/${c.id}`}
                       className="text-sm text-blue-600 hover:underline"
                     >
-                      Редактировать →
+                      Edit →
                     </Link>
                   </td>
                 </tr>
@@ -134,7 +134,7 @@ export default async function CounterpartiesListPage(
 
       {counterparties.length === 100 && (
         <p className="text-xs text-zinc-500">
-          Показаны первые 100 результатов. Уточните поиск.
+          Showing first 100 results. Refine your search.
         </p>
       )}
     </div>

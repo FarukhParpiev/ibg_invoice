@@ -1,6 +1,6 @@
 // Auth.js v5 (Next.js App Router)
-// Провайдеры в MVP: e-mail + пароль (Credentials), магик-ссылка (Email).
-// Google OAuth — отложен, легко добавить сюда в будущем.
+// MVP providers: e-mail + password (Credentials), magic link (Email).
+// Google OAuth — deferred, can be plugged in here later.
 
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";

@@ -12,37 +12,37 @@ export default async function AdminDashboardPage() {
 
   const cards = [
     {
-      title: "Наши компании",
+      title: "Our companies",
       value: companiesCount,
       href: "/admin/companies",
-      hint: "Активных",
+      hint: "Active",
     },
     {
-      title: "Контрагенты",
+      title: "Counterparties",
       value: counterpartiesCount,
       href: "/admin/counterparties",
-      hint: "Активных",
+      hint: "Active",
     },
     {
-      title: "Инвойсов всего",
+      title: "Invoices total",
       value: invoicesCount,
       href: "/admin/invoices",
-      hint: "Включая draft/issued/paid/cancelled",
+      hint: "Including draft/issued/paid/cancelled",
     },
     {
-      title: "Черновики",
+      title: "Drafts",
       value: draftCount,
       href: "/admin/invoices?status=draft",
-      hint: "Со статусом draft",
+      hint: "With status draft",
     },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Дашборд</h1>
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Обзор справочников и инвойсов.
+          Overview of directories and invoices.
         </p>
       </div>
 
@@ -63,23 +63,23 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="border rounded-lg p-6 bg-zinc-50">
-        <h2 className="font-medium mb-2">Следующие шаги</h2>
+        <h2 className="font-medium mb-2">Next steps</h2>
         <ul className="text-sm text-zinc-700 list-disc pl-5 space-y-1">
           <li>
-            Отредактируйте{" "}
+            Edit{" "}
             <Link href="/admin/companies" className="underline">
-              наши 9 компаний
+              our 9 companies
             </Link>{" "}
-            — загрузите логотипы (по URL), уточните реквизиты.
+            — upload logos (by URL), refine details.
           </li>
           <li>
-            Добавьте{" "}
+            Add{" "}
             <Link href="/admin/counterparties" className="underline">
-              контрагентов
+              counterparties
             </Link>{" "}
-            — можно постепенно, из старой таблицы.
+            — can be done gradually, from the old spreadsheet.
           </li>
-          <li>Этап 2 — создание инвойсов (в разработке).</li>
+          <li>Stage 2 — invoice creation (in progress).</li>
         </ul>
       </div>
     </div>

@@ -43,31 +43,31 @@ export function NewUserForm() {
           type="email"
           className="input"
           autoComplete="off"
-          {...register("email", { required: "Email обязателен" })}
+          {...register("email", { required: "Email is required" })}
         />
       </Field>
 
-      <Field label="Имя (необязательно)">
+      <Field label="Name (optional)">
         <input className="input" {...register("name")} />
       </Field>
 
-      <Field label="Роль">
+      <Field label="Role">
         <select className="input" {...register("role")}>
-          <option value="user">user — работа с инвойсами и контрагентами</option>
+          <option value="user">user — works with invoices and counterparties</option>
           <option value="super_admin">
-            super_admin — полный доступ, включая компании и юзеров
+            super_admin — full access, including companies and users
           </option>
         </select>
       </Field>
 
-      <Field label="Пароль (минимум 8 символов)" error={formState.errors.password?.message}>
+      <Field label="Password (minimum 8 characters)" error={formState.errors.password?.message}>
         <input
           type="password"
           className="input"
           autoComplete="new-password"
           {...register("password", {
-            required: "Пароль обязателен",
-            minLength: { value: 8, message: "Минимум 8 символов" },
+            required: "Password is required",
+            minLength: { value: 8, message: "Minimum 8 characters" },
           })}
         />
       </Field>
@@ -84,14 +84,14 @@ export function NewUserForm() {
           disabled={isPending}
           className="bg-black text-white rounded px-5 py-2.5 hover:bg-zinc-800 disabled:opacity-40"
         >
-          {isPending ? "Создание…" : "Создать юзера"}
+          {isPending ? "Creating…" : "Create user"}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="rounded px-5 py-2.5 border hover:bg-zinc-50"
         >
-          Отмена
+          Cancel
         </button>
       </div>
 

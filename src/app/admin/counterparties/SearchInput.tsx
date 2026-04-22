@@ -25,7 +25,7 @@ export function SearchInput({ defaultValue }: { defaultValue: string }) {
       type="search"
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      placeholder="Поиск по имени, e-mail, Tax ID…"
+      placeholder="Search by name, e-mail, Tax ID…"
       className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
     />
   );

@@ -9,14 +9,14 @@ export default async function HomePage() {
       <div className="text-center space-y-3">
         <h1 className="text-4xl font-semibold">IBG Invoice</h1>
         <p className="text-zinc-500 max-w-md">
-          Веб-приложение для генерации инвойсов по комиссионным выплатам.
+          Web application for generating commission invoices.
         </p>
       </div>
 
       {session?.user ? (
         <div className="flex flex-col items-center gap-3">
           <p className="text-zinc-700">
-            Вы вошли как <strong>{session.user.email}</strong>{" "}
+            Signed in as <strong>{session.user.email}</strong>{" "}
             <span className="text-xs uppercase px-2 py-0.5 rounded bg-zinc-100">
               {session.user.role}
             </span>
@@ -26,13 +26,13 @@ export default async function HomePage() {
               href="/admin"
               className="px-4 py-2 rounded bg-black text-white hover:bg-zinc-800"
             >
-              Перейти в админку
+              Go to admin
             </Link>
             <Link
               href="/api/auth/signout"
               className="px-4 py-2 rounded border hover:bg-zinc-50"
             >
-              Выйти
+              Sign out
             </Link>
           </div>
         </div>
@@ -41,7 +41,7 @@ export default async function HomePage() {
           href="/login"
           className="px-6 py-3 rounded-full bg-black text-white hover:bg-zinc-800"
         >
-          Войти
+          Sign in
         </Link>
       )}
 

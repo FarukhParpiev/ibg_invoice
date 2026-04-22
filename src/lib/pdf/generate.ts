@@ -1,10 +1,10 @@
-// Запускает headless-браузер и рендерит HTML в PDF (A4, фон включён).
-// Две ветки:
+// Spins up a headless browser and renders HTML to PDF (A4, backgrounds on).
+// Two branches:
 // - Vercel/AWS Lambda → @sparticuz/chromium + puppeteer-core
-// - Локально (mac/linux dev) → системный Chrome/Chromium через puppeteer-core
+// - Local (mac/linux dev) → system Chrome/Chromium via puppeteer-core
 //
-// Чтобы не тащить сам Chromium в зависимости разработки, локально ищем
-// исполняемый файл по переменным окружения и стандартным путям.
+// To avoid shipping Chromium as a dev dependency, locally we look up the
+// executable via env vars and standard paths.
 
 import type { Browser, LaunchOptions } from "puppeteer-core";
 
@@ -24,7 +24,7 @@ function localChromePath(): string {
     return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
   }
   throw new Error(
-    "Не найден путь до Chrome. Установите PUPPETEER_EXECUTABLE_PATH.",
+    "Chrome path not found. Set PUPPETEER_EXECUTABLE_PATH.",
   );
 }
 
@@ -52,14 +52,14 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    // networkidle0 — чтобы дождаться загрузки логотипа и шрифтов
+    // networkidle0 — so we wait for logo and fonts to finish loading
     await page.setContent(html, { waitUntil: "networkidle0" });
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
-      // Стандартные «безопасные» поля для печати документов: 15 мм со всех
-      // сторон. Принтеры срезают 5–8 мм по краям — меньше 12 мм ставить
-      // рискованно (часть текста уходит в обрез).
+      // Standard "safe" margins for printed documents: 15 mm on every
+      // side. Printers clip 5–8 mm at the edges — going below 12 mm is
+      // risky (part of the text ends up in the trim).
       margin: { top: "15mm", right: "15mm", bottom: "15mm", left: "15mm" },
     });
     return Buffer.from(pdf);

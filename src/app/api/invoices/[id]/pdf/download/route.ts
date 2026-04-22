@@ -1,10 +1,10 @@
 // GET /api/invoices/[id]/pdf/download
-// Auth-gated стрим PDF из приватного Vercel Blob. Если PDF ещё нет —
-// регенерируем. Требует super_admin.
+// Auth-gated PDF stream from private Vercel Blob. If a PDF does not exist yet,
+// regenerate it. Requires super_admin.
 //
-// Редирект не подходит: store приватный, blob.url требует токен, который
-// браузер не знает. Поэтому тянем поток через get() с серверным токеном
-// и отдаём клиенту напрямую.
+// A redirect is not an option: the store is private, blob.url needs a token
+// that the browser doesn't have. So we pull the stream through get() with a
+// server-side token and hand it to the client directly.
 
 import { NextResponse } from "next/server";
 import { get } from "@vercel/blob";
@@ -36,14 +36,18 @@ export async function GET(
       const gen = await regenerateInvoicePdf(id, session.user.id);
       url = gen.url;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Ошибка генерации";
+      const message =
+        err instanceof Error ? err.message : "Generation error";
       return NextResponse.json({ error: message }, { status: 500 });
     }
   }
 
   const result = await get(url, { access: "private" });
   if (!result || result.statusCode !== 200 || !result.stream) {
-    return NextResponse.json({ error: "PDF не найден в хранилище" }, { status: 404 });
+    return NextResponse.json(
+      { error: "PDF not found in storage" },
+      { status: 404 },
+    );
   }
 
   const filename = `${inv.number ?? "invoice"}.pdf`.replace(/[^A-Za-z0-9._-]/g, "_");

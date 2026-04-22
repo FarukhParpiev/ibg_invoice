@@ -58,7 +58,7 @@ export function CounterpartyForm({
         if (mode.kind === "create") {
           router.push(`/admin/counterparties/${res.id}`);
         } else {
-          setMessage({ kind: "ok", text: "Сохранено" });
+          setMessage({ kind: "ok", text: "Saved" });
           reset(values);
         }
       } else {
@@ -69,7 +69,7 @@ export function CounterpartyForm({
 
   const onDelete = () => {
     if (mode.kind !== "edit") return;
-    if (!confirm("Удалить контрагента? Если у него есть инвойсы — он будет скрыт, а не удалён.")) {
+    if (!confirm("Delete this counterparty? If it has invoices, it will be hidden instead of deleted.")) {
       return;
     }
     startDelete(async () => {
@@ -83,19 +83,19 @@ export function CounterpartyForm({
       className="border rounded-lg p-6 space-y-5 bg-white"
     >
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Название" error={errors.name?.message} wide>
+        <Field label="Name" error={errors.name?.message} wide>
           <input
             className="input"
             autoFocus={mode.kind === "create"}
-            {...register("name", { required: "Обязательное поле" })}
+            {...register("name", { required: "Required" })}
           />
         </Field>
 
-        <Field label="Предпочитаемый язык">
+        <Field label="Preferred language">
           <select className="input" {...register("preferredLanguage")}>
             <option value="en">English</option>
             <option value="th">ภาษาไทย</option>
-            <option value="ru">Русский</option>
+            <option value="ru">Russian</option>
           </select>
         </Field>
 
@@ -103,7 +103,7 @@ export function CounterpartyForm({
           <input className="input" {...register("taxId")} />
         </Field>
 
-        <Field label="Телефон" error={errors.phone?.message}>
+        <Field label="Phone" error={errors.phone?.message}>
           <input className="input" {...register("phone")} />
         </Field>
 
@@ -111,17 +111,17 @@ export function CounterpartyForm({
           <input type="email" className="input" {...register("email")} />
         </Field>
 
-        <Field label="Адрес" error={errors.address?.message} wide>
+        <Field label="Address" error={errors.address?.message} wide>
           <textarea rows={2} className="input resize-y" {...register("address")} />
         </Field>
 
-        <Field label="Заметки" error={errors.notes?.message} wide>
+        <Field label="Notes" error={errors.notes?.message} wide>
           <textarea rows={3} className="input resize-y" {...register("notes")} />
         </Field>
 
         <label className="col-span-2 flex items-center gap-2 text-sm">
           <input type="checkbox" {...register("isActive")} />
-          <span>Активен (доступен при создании инвойсов)</span>
+          <span>Active (available when creating invoices)</span>
         </label>
       </div>
 
@@ -145,10 +145,10 @@ export function CounterpartyForm({
             className="bg-black text-white rounded px-4 py-2 hover:bg-zinc-800 disabled:opacity-40"
           >
             {isPending
-              ? "Сохранение…"
+              ? "Saving…"
               : mode.kind === "create"
-                ? "Создать"
-                : "Сохранить"}
+                ? "Create"
+                : "Save"}
           </button>
           {mode.kind === "edit" && (
             <button
@@ -160,7 +160,7 @@ export function CounterpartyForm({
               }}
               className="rounded px-4 py-2 border hover:bg-zinc-50 disabled:opacity-40"
             >
-              Отменить
+              Cancel
             </button>
           )}
         </div>
@@ -172,7 +172,7 @@ export function CounterpartyForm({
             disabled={isDeleting}
             className="text-sm text-red-600 hover:text-red-800 disabled:opacity-40"
           >
-            {isDeleting ? "Удаление…" : "Удалить"}
+            {isDeleting ? "Deleting…" : "Delete"}
           </button>
         )}
       </div>

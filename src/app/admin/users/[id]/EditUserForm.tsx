@@ -35,7 +35,7 @@ export function EditUserForm({
     startTransition(async () => {
       const res = await updateUser(id, values);
       if (res.ok) {
-        setMessage({ kind: "ok", text: "Сохранено" });
+        setMessage({ kind: "ok", text: "Saved" });
         reset(values);
         router.refresh();
       } else {
@@ -49,28 +49,28 @@ export function EditUserForm({
       onSubmit={handleSubmit(onSubmit)}
       className="border rounded-lg p-5 bg-white space-y-4"
     >
-      <Field label="Имя">
+      <Field label="Name">
         <input className="input" {...register("name")} />
       </Field>
 
-      <Field label="Роль">
+      <Field label="Role">
         <select className="input" disabled={isSelf} {...register("role")}>
           <option value="user">user</option>
           <option value="super_admin">super_admin</option>
         </select>
         {isSelf && (
           <span className="text-xs text-zinc-500">
-            Собственную роль менять нельзя.
+            You cannot change your own role.
           </span>
         )}
       </Field>
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" disabled={isSelf} {...register("isActive")} />
-        <span>Активен</span>
+        <span>Active</span>
         {isSelf && (
           <span className="text-xs text-zinc-500 ml-2">
-            — себя нельзя отключить
+            — you cannot deactivate yourself
           </span>
         )}
       </label>
@@ -93,7 +93,7 @@ export function EditUserForm({
           disabled={isPending}
           className="bg-black text-white rounded px-5 py-2.5 hover:bg-zinc-800 disabled:opacity-40"
         >
-          {isPending ? "Сохранение…" : "Сохранить"}
+          {isPending ? "Saving…" : "Save"}
         </button>
       </div>
 

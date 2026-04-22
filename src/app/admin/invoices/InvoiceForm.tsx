@@ -32,12 +32,12 @@ export type InvoiceFormContext = {
 };
 
 const templateOptions: { value: InvoiceFormValues["template"]; label: string }[] = [
-  { value: "ibg_thb", label: "IBG THB (резиденты)" },
+  { value: "ibg_thb", label: "IBG THB (residents)" },
   { value: "ib_group_thb", label: "IB Group THB" },
   { value: "ib_group_usd", label: "IB Group USD" },
   { value: "wise_thb", label: "Wise THB" },
   { value: "crypto", label: "Crypto" },
-  { value: "ibg_kas", label: "IBG Kas (наличные)" },
+  { value: "ibg_kas", label: "IBG Kas (cash)" },
   { value: "others_thai", label: "Others Thai" },
 ];
 
@@ -92,7 +92,7 @@ export function InvoiceForm({
   const { register, control, handleSubmit, formState, setValue, reset } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
-  // Live-значения для пересчёта итогов
+  // Live values used to recompute totals
   const watchedItems = useWatch({ control, name: "items" });
   const vatApplied = useWatch({ control, name: "vatApplied" });
   const vatIncluded = useWatch({ control, name: "vatIncluded" });
@@ -103,8 +103,8 @@ export function InvoiceForm({
   const ourCompanyId = useWatch({ control, name: "ourCompanyId" });
   const template = useWatch({ control, name: "template" });
 
-  // Для шаблона IB Group USD ввод идёт в THB, amount считается в USD
-  // через курс. Отдельный режим в форме и в PDF.
+  // For the IB Group USD template, input is in THB, amount is computed in
+  // USD via the rate. Dedicated mode in the form and in the PDF.
   const isUsdTemplate = template === "ib_group_usd";
 
   const totals = useMemo(() => {
@@ -162,7 +162,7 @@ export function InvoiceForm({
         if (mode.kind === "create") {
           router.push(`/admin/invoices/${res.id}`);
         } else {
-          setMessage({ kind: "ok", text: "Сохранено" });
+          setMessage({ kind: "ok", text: "Saved" });
           reset(values);
         }
       } else {
@@ -176,17 +176,17 @@ export function InvoiceForm({
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-6"
     >
-      {/* ───── Реквизиты ───── */}
+      {/* ───── Details ───── */}
       <section className="border rounded-lg p-5 bg-white space-y-4">
-        <h2 className="font-medium">Реквизиты</h2>
+        <h2 className="font-medium">Details</h2>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Шаблон PDF">
+          <Field label="PDF template">
             <select
               className="input"
               {...register("template", {
                 onChange: (e) => {
                   if (e.target.value === "ib_group_usd") {
-                    // Для USD-шаблона primary всегда USD, show/equivalent не используется
+                    // For the USD template, primary is always USD; show-equivalent is not used
                     setValue("primaryCurrency", "USD", { shouldDirty: true });
                     setValue("showUsdEquivalent", false, {
                       shouldDirty: true,
@@ -203,9 +203,9 @@ export function InvoiceForm({
             </select>
           </Field>
 
-          <Field label="Способ оплаты">
+          <Field label="Payment method">
             <select className="input" {...register("paymentTermsId")}>
-              <option value="">— не указано —</option>
+              <option value="">— not specified —</option>
               {ctx.paymentTerms.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
@@ -214,7 +214,7 @@ export function InvoiceForm({
             </select>
           </Field>
 
-          <Field label="Наша компания" error={formState.errors.ourCompanyId?.message} wide>
+          <Field label="Our company" error={formState.errors.ourCompanyId?.message} wide>
             <select
               className="input"
               {...register("ourCompanyId", {
@@ -236,7 +236,7 @@ export function InvoiceForm({
                 },
               })}
             >
-              <option value="">— выберите —</option>
+              <option value="">— select —</option>
               {ctx.companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -245,13 +245,13 @@ export function InvoiceForm({
             </select>
           </Field>
 
-          <Field label="Наш банковский счёт" error={formState.errors.ourBankAccountId?.message} wide>
+          <Field label="Our bank account" error={formState.errors.ourBankAccountId?.message} wide>
             <select
               className="input"
               disabled={!currentCompany}
               {...register("ourBankAccountId")}
             >
-              <option value="">— выберите —</option>
+              <option value="">— select —</option>
               {availableBanks.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.bankName} · {b.currency} · {b.accountNumber}
@@ -261,7 +261,7 @@ export function InvoiceForm({
             </select>
           </Field>
 
-          <Field label="Контрагент" error={formState.errors.counterpartyId?.message} wide>
+          <Field label="Counterparty" error={formState.errors.counterpartyId?.message} wide>
             <Controller
               control={control}
               name="counterpartyId"
@@ -278,11 +278,11 @@ export function InvoiceForm({
         </div>
       </section>
 
-      {/* ───── Даты и валюта ───── */}
+      {/* ───── Dates and currency ───── */}
       <section className="border rounded-lg p-5 bg-white space-y-4">
-        <h2 className="font-medium">Даты и валюта</h2>
+        <h2 className="font-medium">Dates and currency</h2>
         <div className="grid grid-cols-3 gap-4">
-          <Field label="Дата выпуска" error={formState.errors.issueDate?.message}>
+          <Field label="Issue date" error={formState.errors.issueDate?.message}>
             <input type="date" className="input" {...register("issueDate")} />
           </Field>
           <Field label="Due date">
@@ -308,17 +308,17 @@ export function InvoiceForm({
           {isUsdTemplate ? (
             <div className="col-span-2 flex items-center gap-3 pt-5 text-sm">
               <span className="text-zinc-700 font-medium">
-                Курс THB → USD:
+                THB → USD rate:
               </span>
               <input
                 type="number"
                 step="0.0001"
-                placeholder="напр. 34.5"
+                placeholder="e.g. 34.5"
                 className="input w-36"
                 {...register("exchangeRate", { valueAsNumber: true })}
               />
               <span className="text-xs text-zinc-500">
-                Commission (USD) = Commission (THB) / Rate. Фиксируется при
+                Commission (USD) = Commission (THB) / Rate. Locked in on
                 Issue.
               </span>
             </div>
@@ -326,11 +326,11 @@ export function InvoiceForm({
             <div className="col-span-2 flex items-center gap-4 pt-5">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" {...register("showUsdEquivalent")} />
-                <span>Показать эквивалент в USD</span>
+                <span>Show USD equivalent</span>
               </label>
               {showUsdEquivalent && primaryCurrency !== "USD" && (
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-zinc-600">Курс (THB за 1 USD):</span>
+                  <span className="text-zinc-600">Rate (THB per 1 USD):</span>
                   <input
                     type="number"
                     step="0.0001"
@@ -350,21 +350,21 @@ export function InvoiceForm({
             {vatApplied && (
               <label className="flex items-center gap-2 text-xs text-zinc-600 ml-5">
                 <input type="checkbox" {...register("vatIncluded")} />
-                <span>VAT уже включён в сумму комиссии</span>
+                <span>VAT already included in the commission amount</span>
               </label>
             )}
           </div>
           <label className="flex items-center gap-2 text-sm col-span-1">
             <input type="checkbox" {...register("whtApplied")} />
-            <span>WHT 3% (вычитается)</span>
+            <span>WHT 3% (deducted)</span>
           </label>
         </div>
       </section>
 
-      {/* ───── Позиции ───── */}
+      {/* ───── Line items ───── */}
       <section className="border rounded-lg p-5 bg-white space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">Позиции</h2>
+          <h2 className="font-medium">Line items</h2>
           <div className="flex gap-2">
             <button
               type="button"
@@ -412,7 +412,7 @@ export function InvoiceForm({
               }
               className="text-sm border rounded px-3 py-1.5 hover:bg-zinc-50"
             >
-              + Другое
+              + Other
             </button>
           </div>
         </div>
@@ -433,7 +433,7 @@ export function InvoiceForm({
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs uppercase text-zinc-500">
-                    Позиция {idx + 1} · {itemType}
+                    Line {idx + 1} · {itemType}
                   </span>
                   <button
                     type="button"
@@ -441,7 +441,7 @@ export function InvoiceForm({
                     disabled={fields.length === 1}
                     className="text-xs text-red-600 hover:text-red-800 disabled:opacity-30"
                   >
-                    Удалить
+                    Remove
                   </button>
                 </div>
 
@@ -451,14 +451,14 @@ export function InvoiceForm({
                 />
 
                 <div className="grid grid-cols-4 gap-3">
-                  <Field label={itemType === "other" ? "Название (за что платят)" : "Проект"}>
+                  <Field label={itemType === "other" ? "Name (what is being paid for)" : "Project"}>
                     <input
                       className="input"
                       {...register(`items.${idx}.projectName` as const)}
                     />
                   </Field>
                   {itemType !== "other" && (
-                    <Field label="Unit / код">
+                    <Field label="Unit / code">
                       <input
                         className="input"
                         {...register(`items.${idx}.unitCode` as const)}
@@ -544,7 +544,7 @@ export function InvoiceForm({
                     </Field>
                   ) : (
                     <Field
-                      label={isUsdTemplate ? "Сумма (THB)" : "Сумма"}
+                      label={isUsdTemplate ? "Amount (THB)" : "Amount"}
                       wide
                     >
                       <input
@@ -558,7 +558,7 @@ export function InvoiceForm({
                     </Field>
                   )}
 
-                  <Field label="Комментарий" wide>
+                  <Field label="Comment" wide>
                     <input
                       className="input"
                       {...register(`items.${idx}.note` as const)}
@@ -578,7 +578,7 @@ export function InvoiceForm({
         </div>
       </section>
 
-      {/* ───── Итоги ───── */}
+      {/* ───── Totals ───── */}
       <section className="border rounded-lg p-5 bg-zinc-50 space-y-2 text-sm tabular-nums">
         <Row
           label="Subtotal"
@@ -587,14 +587,14 @@ export function InvoiceForm({
         />
         {vatApplied && (
           <Row
-            label={vatIncluded ? "VAT 7% (включён в сумму)" : "VAT 7%"}
+            label={vatIncluded ? "VAT 7% (included in amount)" : "VAT 7%"}
             value={totals.vatAmount}
             currency={primaryCurrency}
           />
         )}
         {whtApplied && (
           <Row
-            label="WHT 3% (вычитается)"
+            label="WHT 3% (deducted)"
             value={-totals.whtAmount}
             currency={primaryCurrency}
           />
@@ -608,16 +608,16 @@ export function InvoiceForm({
           />
         </div>
 
-        {/* USD-шаблон: THB-справка + курс */}
+        {/* USD template: THB reference + rate */}
         {isUsdTemplate && totals.totalThb != null && (
           <div className="pt-2 border-t text-zinc-600 space-y-1">
             <Row
-              label="Subtotal (THB, справочно)"
+              label="Subtotal (THB, reference)"
               value={totals.subtotalThb ?? 0}
               currency="THB"
             />
             <Row
-              label="Total (THB, справочно)"
+              label="Total (THB, reference)"
               value={totals.totalThb}
               currency="THB"
             />
@@ -631,17 +631,17 @@ export function InvoiceForm({
               </div>
             ) : (
               <div className="text-xs text-red-600 text-right pt-1">
-                Курс не указан — USD-суммы не посчитаны
+                Rate is not set — USD amounts are not calculated
               </div>
             )}
           </div>
         )}
 
-        {/* Обычный режим: эквивалент в USD */}
+        {/* Regular mode: USD equivalent */}
         {!isUsdTemplate && showUsdEquivalent && totals.totalUsd != null && (
           <div className="pt-2 text-zinc-600">
             <Row
-              label="Total USD (эквивалент)"
+              label="Total USD (equivalent)"
               value={totals.totalUsd}
               currency="USD"
             />
@@ -649,9 +649,9 @@ export function InvoiceForm({
         )}
       </section>
 
-      {/* ───── Заметки ───── */}
+      {/* ───── Notes ───── */}
       <section className="border rounded-lg p-5 bg-white">
-        <Field label="Заметки (будут отображены на PDF)" wide>
+        <Field label="Notes (will be shown on the PDF)" wide>
           <textarea
             rows={3}
             className="input resize-y"
@@ -679,17 +679,17 @@ export function InvoiceForm({
           className="bg-black text-white rounded px-5 py-2.5 hover:bg-zinc-800 disabled:opacity-40"
         >
           {isPending
-            ? "Сохранение…"
+            ? "Saving…"
             : mode.kind === "create"
-              ? "Создать draft"
-              : "Сохранить"}
+              ? "Create draft"
+              : "Save"}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           className="rounded px-5 py-2.5 border hover:bg-zinc-50"
         >
-          Отмена
+          Cancel
         </button>
       </div>
 
@@ -794,7 +794,7 @@ function LineTotal({
         <div>
           <span className="text-zinc-500">Commission (USD): </span>
           <span className="font-medium">
-            {rate > 0 ? fmt(usd) : "— укажите курс"}
+            {rate > 0 ? fmt(usd) : "— set a rate"}
           </span>
         </div>
       </div>
@@ -803,19 +803,20 @@ function LineTotal({
 
   return (
     <div className="text-right text-sm tabular-nums">
-      <span className="text-zinc-500">Сумма позиции: </span>
+      <span className="text-zinc-500">Line total: </span>
       <span className="font-medium">{fmt(amountThb)}</span>
     </div>
   );
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// Combobox контрагента: type-ahead поиск по 121+ записям.
-// Фильтр по подстроке, нечувствительный к регистру; работает и на латинице,
-// и на тайском, и на кириллице (у нас есть Miss ... / บริษัท ... / ИП ...).
-// Клиентский (ctx.counterparties уже загружен в форму из SSR) — не дёргает API.
+// Counterparty combobox: type-ahead search over 121+ records.
+// Substring filter, case-insensitive; works across Latin, Thai, and Cyrillic
+// (we have Miss ... / บริษัท ... / IP ...).
+// Client-side (ctx.counterparties is already loaded into the form from SSR) —
+// does not hit an API.
 //
-// value — UUID выбранного контрагента (или ""). onChange(id) отдаёт наружу.
+// value — UUID of the selected counterparty (or ""). onChange(id) emits out.
 // ───────────────────────────────────────────────────────────────────────────
 type CounterpartyOption = { id: string; name: string };
 
@@ -840,12 +841,12 @@ function CounterpartyCombobox({
   const [highlight, setHighlight] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Если значение извне поменялось (edit mode, сброс формы) — синхронизируем input
+  // If the external value changes (edit mode, form reset) — sync the input
   useEffect(() => {
     setQuery(selected?.name ?? "");
   }, [selected]);
 
-  // Закрытие по клику вне
+  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const onDocClick = (e: MouseEvent) => {
@@ -863,7 +864,7 @@ function CounterpartyCombobox({
     return options.filter((o) => o.name.toLowerCase().includes(q));
   }, [query, options]);
 
-  // Показываем максимум 50 — если список огромный, пусть сужают запрос
+  // Show at most 50 — if the list is huge, the user should narrow the query
   const visible = filtered.slice(0, 50);
 
   const commit = (opt: CounterpartyOption) => {
@@ -887,21 +888,21 @@ function CounterpartyCombobox({
         aria-expanded={open}
         aria-autocomplete="list"
         className="input"
-        placeholder="Начните вводить имя контрагента…"
+        placeholder="Start typing a counterparty name…"
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
           setOpen(true);
           setHighlight(0);
-          // Если пользователь стёр имя — сбрасываем привязку
+          // If the user cleared the name — drop the binding
           if (e.target.value === "") onChange("");
           else if (selected && e.target.value !== selected.name) onChange("");
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => {
-          // Если в поле текст, который не совпадает ни с одним контрагентом,
-          // откатываем к последнему валидному выбору (или пусто).
-          // Даём mousedown по элементу списка успеть сработать.
+          // If the field has text that does not match any counterparty,
+          // roll back to the last valid selection (or empty).
+          // Give a mousedown on a list item time to fire.
           setTimeout(() => {
             setOpen(false);
             setQuery(selected?.name ?? "");
@@ -931,7 +932,7 @@ function CounterpartyCombobox({
         <button
           type="button"
           onClick={clear}
-          aria-label="Очистить"
+          aria-label="Clear"
           className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-sm"
         >
           ×
@@ -941,7 +942,7 @@ function CounterpartyCombobox({
       {open && (
         <div className="absolute z-20 left-0 right-0 mt-1 bg-white border rounded shadow-md text-sm max-h-72 overflow-auto">
           {visible.length === 0 ? (
-            <div className="px-3 py-2 text-zinc-500">Ничего не найдено</div>
+            <div className="px-3 py-2 text-zinc-500">Nothing found</div>
           ) : (
             <ul role="listbox">
               {visible.map((o, i) => (
@@ -963,7 +964,7 @@ function CounterpartyCombobox({
               ))}
               {filtered.length > visible.length && (
                 <li className="px-3 py-1.5 text-zinc-400 text-xs border-t">
-                  ещё {filtered.length - visible.length} — уточните запрос
+                  {filtered.length - visible.length} more — refine the query
                 </li>
               )}
             </ul>

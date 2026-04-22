@@ -1,7 +1,8 @@
-// Загрузка PDF в Vercel Blob. Store настроен как private — отдаём
-// PDF только через auth-gated стрим /api/invoices/[id]/pdf/download.
-// blob.url в БД — это reference для последующего get(), не публичная
-// ссылка: напрямую из браузера открыть её нельзя, требуется токен.
+// PDF upload to Vercel Blob. The store is configured as private — we
+// serve the PDF only through the auth-gated stream at
+// /api/invoices/[id]/pdf/download.
+// blob.url in the DB is a reference for a later get(), not a public URL:
+// you cannot open it directly in the browser, a token is required.
 
 import { put, del } from "@vercel/blob";
 import { randomBytes } from "node:crypto";
@@ -43,6 +44,6 @@ export async function deleteBlob(url: string): Promise<void> {
   try {
     await del(url);
   } catch {
-    // игнорируем — файла может уже не быть
+    // ignore — the file may already be gone
   }
 }

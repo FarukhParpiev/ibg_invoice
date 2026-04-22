@@ -1,5 +1,5 @@
-// Собирает всё вместе: подтягивает инвойс из БД, рендерит HTML → PDF,
-// заливает в Vercel Blob, записывает pdfUrl и pdfVersions в БД.
+// Glues everything together: loads the invoice from the DB, renders HTML → PDF,
+// uploads to Vercel Blob, writes pdfUrl and pdfVersions back to the DB.
 
 import { prisma } from "@/lib/prisma";
 import { renderInvoiceHtml, type InvoicePdfData } from "./template";
@@ -24,7 +24,7 @@ async function loadInvoiceForPdf(id: string): Promise<InvoicePdfData> {
       paymentTerms: true,
     },
   });
-  if (!inv) throw new Error("Инвойс не найден");
+  if (!inv) throw new Error("Invoice not found");
   return inv;
 }
 
@@ -37,7 +37,7 @@ export async function regenerateInvoicePdf(
   const pdf = await renderHtmlToPdf(html);
   const uploaded = await uploadInvoicePdf(invoiceId, data.number, pdf);
 
-  // Поддерживаем историю версий — JSON массив в Invoice.pdfVersions
+  // We keep a version history — JSON array in Invoice.pdfVersions
   const prev = Array.isArray(data.pdfVersions)
     ? (data.pdfVersions as unknown as PdfVersion[])
     : [];

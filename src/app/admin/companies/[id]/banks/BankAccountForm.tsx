@@ -60,7 +60,7 @@ export function BankAccountForm({
         if (mode.kind === "create") {
           router.push(`/admin/companies/${mode.companyId}`);
         } else {
-          setMessage({ kind: "ok", text: "Сохранено" });
+          setMessage({ kind: "ok", text: "Saved" });
           reset(values);
         }
       } else {
@@ -71,7 +71,7 @@ export function BankAccountForm({
 
   const onDelete = () => {
     if (mode.kind !== "edit") return;
-    if (!confirm("Удалить банковский счёт? Если он используется в инвойсах — удаление будет отменено.")) {
+    if (!confirm("Delete this bank account? If it is used by invoices, the deletion will be cancelled.")) {
       return;
     }
     startDelete(async () => {
@@ -85,7 +85,7 @@ export function BankAccountForm({
       className="border rounded-lg p-6 space-y-5 bg-white"
     >
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Валюта">
+        <Field label="Currency">
           <select className="input" {...register("currency")}>
             <option value="THB">THB</option>
             <option value="USD">USD</option>
@@ -97,33 +97,33 @@ export function BankAccountForm({
         <div className="col-span-1 flex items-end">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" {...register("isDefault")} />
-            <span>Счёт по умолчанию для этой валюты</span>
+            <span>Default account for this currency</span>
           </label>
         </div>
 
-        <Field label="Название банка" error={errors.bankName?.message} wide>
+        <Field label="Bank name" error={errors.bankName?.message} wide>
           <input
             className="input"
             autoFocus={mode.kind === "create"}
-            {...register("bankName", { required: "Обязательное поле" })}
+            {...register("bankName", { required: "Required" })}
           />
         </Field>
 
         <Field
-          label="Имя владельца счёта (Account name)"
+          label="Account name"
           error={errors.accountName?.message}
           wide
         >
           <input
             className="input"
-            {...register("accountName", { required: "Обязательное поле" })}
+            {...register("accountName", { required: "Required" })}
           />
         </Field>
 
-        <Field label="Номер счёта" error={errors.accountNumber?.message}>
+        <Field label="Account number" error={errors.accountNumber?.message}>
           <input
             className="input"
-            {...register("accountNumber", { required: "Обязательное поле" })}
+            {...register("accountNumber", { required: "Required" })}
           />
         </Field>
 
@@ -131,11 +131,11 @@ export function BankAccountForm({
           <input className="input" {...register("swift")} />
         </Field>
 
-        <Field label="Филиал (branch)" error={errors.branch?.message}>
+        <Field label="Branch" error={errors.branch?.message}>
           <input className="input" {...register("branch")} />
         </Field>
 
-        <Field label="Адрес банка" error={errors.bankAddress?.message} wide>
+        <Field label="Bank address" error={errors.bankAddress?.message} wide>
           <textarea
             rows={2}
             className="input resize-y"
@@ -164,10 +164,10 @@ export function BankAccountForm({
             className="bg-black text-white rounded px-4 py-2 hover:bg-zinc-800 disabled:opacity-40"
           >
             {isPending
-              ? "Сохранение…"
+              ? "Saving…"
               : mode.kind === "create"
-                ? "Создать"
-                : "Сохранить"}
+                ? "Create"
+                : "Save"}
           </button>
           {mode.kind === "edit" && (
             <button
@@ -179,7 +179,7 @@ export function BankAccountForm({
               }}
               className="rounded px-4 py-2 border hover:bg-zinc-50 disabled:opacity-40"
             >
-              Отменить
+              Cancel
             </button>
           )}
         </div>
@@ -191,7 +191,7 @@ export function BankAccountForm({
             disabled={isDeleting}
             className="text-sm text-red-600 hover:text-red-800 disabled:opacity-40"
           >
-            {isDeleting ? "Удаление…" : "Удалить"}
+            {isDeleting ? "Deleting…" : "Delete"}
           </button>
         )}
       </div>

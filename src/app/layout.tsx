@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "IBG Invoice",
-  description: "Генерация инвойсов по комиссионным выплатам",
+  description: "Commission invoice generation",
 };
 
 export default function RootLayout({

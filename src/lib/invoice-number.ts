@@ -1,15 +1,15 @@
-// Генерация номера инвойса в формате ДД/ММ/ГГГГ-NNNN.
-// NNNN — глобальный сквозной счётчик (Invoice.serialNumber).
-// Для receipt'ов номер = parent.number + "-R".
+// Invoice number generation in the format DD/MM/YYYY-NNNN.
+// NNNN — global running counter (Invoice.serialNumber).
+// For receipts, number = parent.number + "-R".
 //
-// Работает внутри prisma-транзакции: получаем max(serialNumber) + 1,
-// создаём запись с этим значением. Уникальный индекс на serialNumber
-// защищает от гонок: в случае конфликта — повторяем transaction (retry).
+// Runs inside a Prisma transaction: read max(serialNumber) + 1,
+// create a record with that value. The unique index on serialNumber
+// guards against races: on conflict — retry the transaction.
 
 import type { Prisma } from "@prisma/client";
 
 /**
- * Формат даты ДД/ММ/ГГГГ.
+ * Date format DD/MM/YYYY.
  */
 export function formatIssueDate(d: Date): string {
   const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -28,8 +28,8 @@ export function buildReceiptNumber(parentNumber: string): string {
 }
 
 /**
- * Резервирует следующий глобальный serialNumber.
- * Должен вызываться внутри транзакции.
+ * Reserves the next global serialNumber.
+ * Must be called inside a transaction.
  */
 export async function allocateNextSerial(
   tx: Prisma.TransactionClient,

@@ -7,11 +7,11 @@ import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 
 const counterpartySchema = z.object({
-  name: z.string().min(1, "Обязательное поле").max(200),
+  name: z.string().min(1, "Required").max(200),
   address: z.string().max(1000).optional().or(z.literal("")),
   taxId: z.string().max(100).optional().or(z.literal("")),
   phone: z.string().max(100).optional().or(z.literal("")),
-  email: z.string().email("Некорректный e-mail").or(z.literal("")),
+  email: z.string().email("Invalid e-mail").or(z.literal("")),
   preferredLanguage: z.enum(["en", "th", "ru"]),
   notes: z.string().max(5000).optional().or(z.literal("")),
   isActive: z.boolean(),
@@ -25,7 +25,7 @@ export async function createCounterparty(rawValues: unknown): Promise<Result> {
   await requireSuperAdmin();
   const parsed = counterpartySchema.safeParse(rawValues);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Ошибка валидации" };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
   }
   const v = parsed.data;
   const created = await prisma.counterparty.create({
@@ -51,7 +51,7 @@ export async function updateCounterparty(
   await requireSuperAdmin();
   const parsed = counterpartySchema.safeParse(rawValues);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Ошибка валидации" };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
   }
   const v = parsed.data;
   await prisma.counterparty.update({
@@ -76,7 +76,7 @@ export async function deleteCounterparty(id: string) {
   await requireSuperAdmin();
   const hasInvoices = await prisma.invoice.count({ where: { counterpartyId: id } });
   if (hasInvoices > 0) {
-    // Soft delete — выставляем isActive=false, если есть привязанные инвойсы
+    // Soft delete — set isActive=false if there are linked invoices
     await prisma.counterparty.update({
       where: { id },
       data: { isActive: false },

@@ -26,7 +26,7 @@ export default async function CompanyEditPage(props: PageProps<"/admin/companies
           href="/admin/companies"
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К списку компаний
+          ← Back to companies
         </Link>
         <h1 className="text-2xl font-semibold mt-2">{company.name}</h1>
       </div>
@@ -49,32 +49,32 @@ export default async function CompanyEditPage(props: PageProps<"/admin/companies
       <section className="border rounded-lg p-5 space-y-4">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-medium">Банковские счета</h2>
+            <h2 className="font-medium">Bank accounts</h2>
             <p className="text-xs text-zinc-500 mt-1">
-              Один счёт может быть «по умолчанию» на каждую валюту.
+              One account can be marked "default" per currency.
             </p>
           </div>
           <Link
             href={`/admin/companies/${company.id}/banks/new`}
             className="text-sm bg-black text-white rounded px-3 py-1.5 hover:bg-zinc-800"
           >
-            + Добавить
+            + Add
           </Link>
         </div>
 
         {flashBankDeleted && (
           <div className="text-sm rounded bg-zinc-100 px-3 py-2">
-            Счёт удалён.
+            Account deleted.
           </div>
         )}
         {flashBankInUse && (
           <div className="text-sm rounded bg-red-50 text-red-700 px-3 py-2">
-            Счёт используется в одном или нескольких инвойсах и не может быть удалён.
+            This account is used by one or more invoices and cannot be deleted.
           </div>
         )}
 
         {company.bankAccounts.length === 0 ? (
-          <p className="text-sm text-zinc-500">Пока нет счетов.</p>
+          <p className="text-sm text-zinc-500">No accounts yet.</p>
         ) : (
           <ul className="space-y-2">
             {company.bankAccounts.map((b) => (
@@ -102,7 +102,7 @@ export default async function CompanyEditPage(props: PageProps<"/admin/companies
                       </div>
                     </div>
                     <span className="text-xs text-zinc-400 whitespace-nowrap">
-                      Редактировать →
+                      Edit →
                     </span>
                   </div>
                 </Link>

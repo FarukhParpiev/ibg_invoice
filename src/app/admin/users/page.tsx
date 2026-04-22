@@ -21,16 +21,16 @@ export default async function UsersListPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Юзеры</h1>
+          <h1 className="text-2xl font-semibold">Users</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Управление доступом. Всего: {users.length}.
+            Access management. Total: {users.length}.
           </p>
         </div>
         <Link
           href="/admin/users/new"
           className="bg-black text-white rounded px-4 py-2 text-sm hover:bg-zinc-800"
         >
-          + Новый юзер
+          + New user
         </Link>
       </div>
 
@@ -39,10 +39,10 @@ export default async function UsersListPage() {
           <thead className="bg-zinc-50 text-zinc-600">
             <tr>
               <th className="text-left px-4 py-3 font-medium">Email</th>
-              <th className="text-left px-4 py-3 font-medium">Имя</th>
-              <th className="text-left px-4 py-3 font-medium">Роль</th>
-              <th className="text-left px-4 py-3 font-medium">Статус</th>
-              <th className="text-left px-4 py-3 font-medium">Создан</th>
+              <th className="text-left px-4 py-3 font-medium">Name</th>
+              <th className="text-left px-4 py-3 font-medium">Role</th>
+              <th className="text-left px-4 py-3 font-medium">Status</th>
+              <th className="text-left px-4 py-3 font-medium">Created</th>
               <th className="text-right px-4 py-3 font-medium" />
             </tr>
           </thead>
@@ -50,7 +50,7 @@ export default async function UsersListPage() {
             {users.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-zinc-500">
-                  Пока никого нет.
+                  No users yet.
                 </td>
               </tr>
             ) : (
@@ -71,9 +71,9 @@ export default async function UsersListPage() {
                   </td>
                   <td className="px-4 py-3">
                     {u.isActive ? (
-                      <span className="text-green-700 text-xs">● активен</span>
+                      <span className="text-green-700 text-xs">● active</span>
                     ) : (
-                      <span className="text-zinc-400 text-xs">○ отключён</span>
+                      <span className="text-zinc-400 text-xs">○ disabled</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-zinc-600 text-xs">
@@ -84,7 +84,7 @@ export default async function UsersListPage() {
                       href={`/admin/users/${u.id}`}
                       className="text-sm text-blue-600 hover:underline"
                     >
-                      Редактировать →
+                      Edit →
                     </Link>
                   </td>
                 </tr>

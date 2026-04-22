@@ -34,7 +34,7 @@ export function InvoiceActions({
 
   const handlePay = () => {
     const dateStr = prompt(
-      "Дата оплаты (YYYY-MM-DD):",
+      "Payment date (YYYY-MM-DD):",
       new Date().toISOString().slice(0, 10),
     );
     if (!dateStr) return;
@@ -50,7 +50,7 @@ export function InvoiceActions({
   };
 
   const handleCancel = () => {
-    const reason = prompt("Причина отмены:", "");
+    const reason = prompt("Cancellation reason:", "");
     if (reason === null) return;
     setError(null);
     startTransition(async () => {
@@ -61,17 +61,17 @@ export function InvoiceActions({
   };
 
   const handleDelete = () => {
-    if (!confirm("Удалить draft навсегда?")) return;
+    if (!confirm("Delete draft permanently?")) return;
     startTransition(async () => {
       await deleteDraftInvoice(id);
     });
   };
 
-  // Receipt нельзя модифицировать через эти кнопки
+  // Receipts cannot be modified via these buttons
   if (type === "receipt") {
     return (
       <div className="text-sm text-zinc-500">
-        Это автосозданный receipt. Он изменяется вместе с родительским инвойсом.
+        This is an auto-generated receipt. It changes together with its parent invoice.
       </div>
     );
   }
@@ -86,21 +86,21 @@ export function InvoiceActions({
               disabled={pending}
               className="bg-black text-white rounded px-4 py-2 text-sm hover:bg-zinc-800 disabled:opacity-40"
             >
-              Выпустить (Issue)
+              Issue
             </button>
             <button
               onClick={() => router.push(`/admin/invoices/${id}/edit`)}
               disabled={pending}
               className="border rounded px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-40"
             >
-              Редактировать
+              Edit
             </button>
             <button
               onClick={handleDelete}
               disabled={pending}
               className="text-sm text-red-600 hover:text-red-800 disabled:opacity-40 px-2"
             >
-              Удалить draft
+              Delete draft
             </button>
           </>
         )}
@@ -112,25 +112,25 @@ export function InvoiceActions({
               disabled={pending}
               className="bg-green-600 text-white rounded px-4 py-2 text-sm hover:bg-green-700 disabled:opacity-40"
             >
-              Отметить оплаченным (+ receipt)
+              Mark as paid (+ receipt)
             </button>
             <button
               onClick={handleCancel}
               disabled={pending}
               className="border border-red-300 text-red-700 rounded px-4 py-2 text-sm hover:bg-red-50 disabled:opacity-40"
             >
-              Отменить
+              Cancel
             </button>
           </>
         )}
 
         {status === "paid" && (
           <div className="text-sm text-zinc-600">
-            Инвойс оплачен. Изменения запрещены.
+            Invoice is paid. No further changes allowed.
           </div>
         )}
         {status === "cancelled" && (
-          <div className="text-sm text-zinc-600">Инвойс отменён.</div>
+          <div className="text-sm text-zinc-600">Invoice cancelled.</div>
         )}
       </div>
 

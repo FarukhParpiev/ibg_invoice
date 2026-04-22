@@ -2,15 +2,15 @@ import Link from "next/link";
 import { signOut } from "@/auth";
 import { requireAdminAccess } from "@/lib/auth-helpers";
 
-// superAdminOnly=true — прячем пункт для роли `user`.
-// Наши компании и управление юзерами — только для super_admin.
+// superAdminOnly=true — hides the item from the `user` role.
+// Our companies and user management are super_admin only.
 const navItems: Array<{ href: string; label: string; superAdminOnly?: boolean }> = [
-  { href: "/admin", label: "Дашборд" },
-  { href: "/admin/invoices", label: "Инвойсы" },
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/invoices", label: "Invoices" },
   { href: "/admin/receipts", label: "Receipts" },
-  { href: "/admin/companies", label: "Наши компании", superAdminOnly: true },
-  { href: "/admin/counterparties", label: "Контрагенты" },
-  { href: "/admin/users", label: "Юзеры", superAdminOnly: true },
+  { href: "/admin/companies", label: "Our companies", superAdminOnly: true },
+  { href: "/admin/counterparties", label: "Counterparties" },
+  { href: "/admin/users", label: "Users", superAdminOnly: true },
 ];
 
 export default async function AdminLayout({
@@ -31,7 +31,7 @@ export default async function AdminLayout({
           <Link href="/admin" className="font-semibold text-lg">
             IBG Invoice
           </Link>
-          <p className="text-xs text-zinc-500 mt-1">Админка</p>
+          <p className="text-xs text-zinc-500 mt-1">Admin</p>
         </div>
 
         <nav className="flex flex-col gap-1">
@@ -65,7 +65,7 @@ export default async function AdminLayout({
               type="submit"
               className="w-full text-left text-zinc-700 hover:text-black"
             >
-              Выйти →
+              Log out →
             </button>
           </form>
         </div>

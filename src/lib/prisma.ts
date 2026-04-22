@@ -1,6 +1,6 @@
-// Singleton Prisma-клиент.
-// В dev-режиме Next.js HMR может создавать множество инстансов — это утечёт
-// соединения. Храним клиент в globalThis.
+// Singleton Prisma client.
+// In dev mode Next.js HMR may spawn many instances — that would leak
+// connections. We keep the client on globalThis.
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {

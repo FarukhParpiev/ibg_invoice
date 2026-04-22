@@ -1,5 +1,5 @@
-// Лёгкая обёртка над prisma.auditLog.create для записи действий пользователя.
-// Ошибки внутри логирования не ломают основное действие — глотаем и идём дальше.
+// Lightweight wrapper around prisma.auditLog.create for recording user actions.
+// Errors inside logging must not break the main action — we swallow and move on.
 
 import { prisma } from "@/lib/prisma";
 import type { AuditAction, Prisma } from "@prisma/client";

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
-// Список receipts — отдельный раздел для удобного поиска «чеков» без
-// перемешивания с инвойсами. Receipt создаётся автоматически при оплате
-// (см. payInvoice в src/app/admin/invoices/actions.ts), статус всегда paid.
+// Receipts list — a separate section for easy lookup of "receipts" without
+// mixing them with invoices. A receipt is created automatically on payment
+// (see payInvoice in src/app/admin/invoices/actions.ts), status is always paid.
 
 export default async function ReceiptsListPage({
   searchParams,
@@ -43,7 +43,7 @@ export default async function ReceiptsListPage({
         <div>
           <h1 className="text-2xl font-semibold">Receipts</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Автосозданные квитанции об оплате. Всего: {totalCount}.
+            Auto-generated payment receipts. Total: {totalCount}.
           </p>
         </div>
       </div>
@@ -53,21 +53,21 @@ export default async function ReceiptsListPage({
           type="search"
           name="q"
           defaultValue={q}
-          placeholder="Поиск по номеру, компании или контрагенту…"
+          placeholder="Search by number, company, or counterparty…"
           className="border rounded px-3 py-2 text-sm w-96"
         />
         <button
           type="submit"
           className="border rounded px-4 py-2 text-sm hover:bg-zinc-50"
         >
-          Найти
+          Search
         </button>
         {q && (
           <Link
             href="/admin/receipts"
             className="text-sm text-zinc-500 hover:text-zinc-900 py-2"
           >
-            Сброс
+            Reset
           </Link>
         )}
       </form>
@@ -76,19 +76,19 @@ export default async function ReceiptsListPage({
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-600">
             <tr>
-              <th className="text-left px-4 py-3 font-medium">№ Receipt</th>
-              <th className="text-left px-4 py-3 font-medium">Дата оплаты</th>
-              <th className="text-left px-4 py-3 font-medium">Компания</th>
-              <th className="text-left px-4 py-3 font-medium">Контрагент</th>
-              <th className="text-right px-4 py-3 font-medium">Сумма</th>
-              <th className="text-left px-4 py-3 font-medium">Родительский инвойс</th>
+              <th className="text-left px-4 py-3 font-medium">Receipt No.</th>
+              <th className="text-left px-4 py-3 font-medium">Payment date</th>
+              <th className="text-left px-4 py-3 font-medium">Company</th>
+              <th className="text-left px-4 py-3 font-medium">Counterparty</th>
+              <th className="text-right px-4 py-3 font-medium">Amount</th>
+              <th className="text-left px-4 py-3 font-medium">Parent invoice</th>
             </tr>
           </thead>
           <tbody>
             {receipts.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-zinc-500">
-                  {q ? "Ничего не нашлось." : "Receipts пока нет."}
+                  {q ? "Nothing found." : "No receipts yet."}
                 </td>
               </tr>
             ) : (
@@ -141,7 +141,7 @@ export default async function ReceiptsListPage({
 
       {receipts.length === 100 && (
         <p className="text-xs text-zinc-500">
-          Показаны первые 100. Добавим пагинацию позже.
+          Showing the first 100. Pagination will be added later.
         </p>
       )}
     </div>

@@ -6,13 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 
 const companySchema = z.object({
-  name: z.string().min(1, "Обязательное поле").max(200),
+  name: z.string().min(1, "Required").max(200),
   legalType: z.enum(["resident", "offshore"]),
   address: z.string().max(1000).optional().or(z.literal("")),
   taxId: z.string().max(100).optional().or(z.literal("")),
   registrationNo: z.string().max(100).optional().or(z.literal("")),
   phone: z.string().max(100).optional().or(z.literal("")),
-  email: z.string().email("Некорректный e-mail").or(z.literal("")),
+  email: z.string().email("Invalid e-mail").or(z.literal("")),
   defaultCurrency: z.enum(["THB", "USD", "EUR", "RUB"]),
   isActive: z.boolean(),
 });
@@ -31,7 +31,7 @@ export async function updateCompany(
 
   const parsed = companySchema.safeParse(rawValues);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Некорректные данные" };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid data" };
   }
 
   const v = parsed.data;

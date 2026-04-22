@@ -24,7 +24,7 @@ export default async function EditBankAccountPage(
           href={`/admin/companies/${id}`}
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К {bank.company.name}
+          ← Back to {bank.company.name}
         </Link>
         <div className="flex items-baseline gap-3 mt-2">
           <h1 className="text-2xl font-semibold">{bank.bankName}</h1>

@@ -1,6 +1,6 @@
 "use client";
 
-// Кнопка «Создать копию» → новый draft по шаблону текущего инвойса.
+// "Duplicate" button → creates a new draft from the current invoice as a template.
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ export function DuplicateButton({ invoiceId }: { invoiceId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const onClick = () => {
-    if (!confirm("Создать копию этого инвойса как новый draft?")) return;
+    if (!confirm("Duplicate this invoice as a new draft?")) return;
     setError(null);
     startTransition(async () => {
       const res = await duplicateInvoice(invoiceId);
@@ -31,7 +31,7 @@ export function DuplicateButton({ invoiceId }: { invoiceId: string }) {
         disabled={pending}
         className="border rounded px-3 py-1.5 text-sm hover:bg-zinc-50 disabled:opacity-40"
       >
-        {pending ? "Копируется…" : "Создать копию"}
+        {pending ? "Duplicating…" : "Duplicate"}
       </button>
       {error && (
         <div className="text-sm rounded bg-red-50 text-red-700 px-3 py-2">

@@ -12,9 +12,9 @@ export default async function NewUserPage() {
           href="/admin/users"
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К юзерам
+          ← Back to users
         </Link>
-        <h1 className="text-2xl font-semibold mt-2">Новый юзер</h1>
+        <h1 className="text-2xl font-semibold mt-2">New user</h1>
       </div>
       <NewUserForm />
     </div>

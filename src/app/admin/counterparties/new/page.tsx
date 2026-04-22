@@ -9,9 +9,9 @@ export default function NewCounterpartyPage() {
           href="/admin/counterparties"
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К списку
+          ← Back to list
         </Link>
-        <h1 className="text-2xl font-semibold mt-2">Новый контрагент</h1>
+        <h1 className="text-2xl font-semibold mt-2">New counterparty</h1>
       </div>
 
       <CounterpartyForm mode={{ kind: "create" }} />

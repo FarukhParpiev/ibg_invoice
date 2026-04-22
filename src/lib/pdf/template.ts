@@ -1,10 +1,10 @@
-// HTML-шаблон для PDF инвойса.
-// Одна универсальная вёрстка, которая адаптируется под поле Invoice.template:
-// - ibg_kas            → скрывает банковские реквизиты (наличные)
-// - crypto             → заголовок "Crypto payment" вместо банка
-// - остальные          → полноценный блок с банковскими реквизитами
+// HTML template for the invoice PDF.
+// Single universal layout that adapts to the Invoice.template field:
+// - ibg_kas            → hides bank details (cash payment)
+// - crypto             → "Crypto payment" header instead of bank details
+// - everything else    → full block with bank details
 //
-// Язык берётся из counterparty.preferredLanguage.
+// Language is taken from counterparty.preferredLanguage.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -18,9 +18,9 @@ import type {
 } from "@prisma/client";
 import { t, type PdfLang } from "./i18n";
 
-// Универсальный логотип IBG — одинаковый для всех 9 компаний.
-// Встраиваем как data-URI, потому что page.setContent() в Puppeteer не имеет
-// baseURL, и относительные пути не резолвятся.
+// Universal IBG logo — the same for all 9 companies.
+// We inline it as a data-URI because page.setContent() in Puppeteer has no
+// baseURL, so relative paths do not resolve.
 let cachedLogoDataUri: string | null | undefined;
 function loadUniversalLogoDataUri(): string | null {
   if (cachedLogoDataUri !== undefined) return cachedLogoDataUri;
@@ -38,7 +38,7 @@ function loadUniversalLogoDataUri(): string | null {
       cachedLogoDataUri = `data:${c.mime};base64,${buf.toString("base64")}`;
       return cachedLogoDataUri;
     } catch {
-      // файла нет — пробуем следующий формат
+      // file missing — try the next format
     }
   }
   cachedLogoDataUri = null;
@@ -85,10 +85,10 @@ function escapeHtml(s: string | null | undefined): string {
     .replace(/'/g, "&#039;");
 }
 
-// THB-сумма строки (до деления на курс). Для commission собирается из
-// sellingPrice+spCorr × % + commCorr; для bonus — сам bonusAmount.
-// Inputs в БД всегда в «базовой» валюте (для ib_group_usd это THB),
-// что позволяет восстановить THB-срез детерминированно.
+// THB line amount (before dividing by rate). For commission it is built from
+// sellingPrice+spCorr × % + commCorr; for bonus — bonusAmount itself.
+// Inputs in the DB are always in the "base" currency (THB for ib_group_usd),
+// which lets us reconstruct the THB slice deterministically.
 function calcItemThbAmount(it: InvoicePdfData["items"][number]): number {
   if (it.itemType === "commission") {
     const sp = Number(it.sellingPrice ?? 0) + Number(it.sellingPriceCorrection ?? 0);
@@ -191,9 +191,9 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
     })
     .join("");
 
-  // USD-шаблон: справочные THB-суммы. Sum(line THB) = subtotalThb.
-  // VAT-режим: сверху (+7%) или включён в сумму (извлекаем 7/107).
-  // WHT всегда от pre-VAT базы (net) — в обоих режимах 3% совпадает.
+  // USD template: reference THB amounts. Sum(line THB) = subtotalThb.
+  // VAT mode: on top (+7%) or included in the line amount (extract 7/107).
+  // WHT is always off the pre-VAT base (net) — 3% matches in both modes.
   const subtotalThb = isUsdTemplate
     ? invoice.items.reduce((s, it) => s + calcItemThbAmount(it), 0)
     : 0;
@@ -209,8 +209,8 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
     ? subtotalThb - whtThb
     : subtotalThb + vatThb - whtThb;
 
-  // На receipt платёжные реквизиты не нужны — деньги уже получены,
-   // а блок съедает пол-страницы и выталкивает receipt на вторую A4.
+  // On a receipt we don't need payment details — money is already in,
+  // and this block eats half the page, pushing the receipt onto a second A4.
   const paymentSection = isReceipt
     ? ""
     : isCash
@@ -262,9 +262,9 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
 <meta charset="utf-8"/>
 <title>${escapeHtml(title)} ${escapeHtml(number)}</title>
 <style>
-  /* Поля задаём через page.pdf({margin}) в generate.ts (15 мм).
-     Здесь фиксируем только размер — если указать margin:0, CSS @page
-     перебьёт puppeteer-опцию и всё упрётся в край листа. */
+  /* Margins are set via page.pdf({margin}) in generate.ts (15 mm).
+     Here we fix only the size — if margin:0 is set, CSS @page overrides
+     the puppeteer option and content collapses to the paper edge. */
   @page { size: A4; }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; font-family: ${lang === "th" ? "'Sarabun', 'Noto Sans Thai', sans-serif" : "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"}; font-size: 9pt; color: #111; line-height: 1.35; }
@@ -368,7 +368,7 @@ ${
   ${invoice.whtApplied ? `<div class="row"><span>${escapeHtml(L.wht)} (USD)</span><span class="v">− ${fmt(invoice.whtAmount, lang)} USD</span></div>` : ""}
   <div class="row grand"><span>${escapeHtml(L.total)}</span><span class="v">${fmt(invoice.total, lang)} USD</span></div>
   <div class="usd-box">
-    <div class="row"><span>${escapeHtml(L.total)} (THB, справочно)</span><span class="v">${fmt(totalThb, lang)} THB</span></div>
+    <div class="row"><span>${escapeHtml(L.total)} (THB, ref.)</span><span class="v">${fmt(totalThb, lang)} THB</span></div>
     ${rate > 0 ? `<div class="row"><span>${escapeHtml(L.exchangeRate)}</span><span class="v">1 USD = ${fmt(rate, lang)} THB</span></div>` : ""}
   </div>
 </div>`

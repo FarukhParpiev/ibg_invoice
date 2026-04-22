@@ -7,9 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 
 const bankAccountSchema = z.object({
-  bankName: z.string().min(1, "Обязательное поле").max(200),
-  accountName: z.string().min(1, "Обязательное поле").max(200),
-  accountNumber: z.string().min(1, "Обязательное поле").max(100),
+  bankName: z.string().min(1, "Required").max(200),
+  accountName: z.string().min(1, "Required").max(200),
+  accountNumber: z.string().min(1, "Required").max(100),
   swift: z.string().max(50).optional().or(z.literal("")),
   branch: z.string().max(200).optional().or(z.literal("")),
   bankAddress: z.string().max(1000).optional().or(z.literal("")),
@@ -28,12 +28,12 @@ export async function createBankAccount(
   await requireSuperAdmin();
   const parsed = bankAccountSchema.safeParse(rawValues);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Ошибка валидации" };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
   }
   const v = parsed.data;
 
   const created = await prisma.$transaction(async (tx) => {
-    // Если новый счёт = default, снимаем флаг со всех остальных той же валюты в этой компании
+    // If the new account is default, clear the flag on all other accounts of the same currency in this company
     if (v.isDefault) {
       await tx.bankAccount.updateMany({
         where: { companyId, currency: v.currency, isDefault: true },
@@ -67,7 +67,7 @@ export async function updateBankAccount(
   await requireSuperAdmin();
   const parsed = bankAccountSchema.safeParse(rawValues);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Ошибка валидации" };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
   }
   const v = parsed.data;
 

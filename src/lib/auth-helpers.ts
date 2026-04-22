@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import type { Session } from "next-auth";
 
 /**
- * Требует активную сессию. Если нет — редирект на /login с возвратом.
+ * Requires an active session. If none — redirect to /login with return URL.
  */
 export async function requireAuth(redirectTo = "/login"): Promise<Session> {
   const session = await auth();
@@ -12,9 +12,9 @@ export async function requireAuth(redirectTo = "/login"): Promise<Session> {
 }
 
 /**
- * Требует роль super_admin. Иначе — /login или 403.
- * Используется для мутаций, которые доступны только владельцам
- * системы: редактирование наших компаний, управление юзерами.
+ * Requires super_admin role. Otherwise — /login or 403.
+ * Used for mutations available only to system owners:
+ * editing our companies, user management.
  */
 export async function requireSuperAdmin(): Promise<Session> {
   const session = await requireAuth();
@@ -25,9 +25,9 @@ export async function requireSuperAdmin(): Promise<Session> {
 }
 
 /**
- * Требует любую активную сессию (super_admin или user).
- * Это «рабочая» роль: создавать/править инвойсы, контрагентов, receipts.
- * Мы даём ей всё, кроме наших компаний и управления юзерами.
+ * Requires any active session (super_admin or user).
+ * This is the "working" role: create/edit invoices, counterparties, receipts.
+ * We grant it everything except our companies and user management.
  */
 export async function requireAdminAccess(): Promise<Session> {
   const session = await requireAuth();

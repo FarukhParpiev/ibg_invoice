@@ -36,12 +36,12 @@ export default async function EditUserPage({
           href="/admin/users"
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К юзерам
+          ← Back to users
         </Link>
         <h1 className="text-2xl font-semibold mt-2">{user.email}</h1>
         <p className="text-xs text-zinc-500 mt-1">
-          Создан {user.createdAt.toISOString().slice(0, 10)}
-          {isSelf && " · это вы"}
+          Created {user.createdAt.toISOString().slice(0, 10)}
+          {isSelf && " · this is you"}
         </p>
       </div>
 
@@ -56,9 +56,9 @@ export default async function EditUserPage({
       />
 
       <section className="border rounded-lg p-5 bg-white space-y-3">
-        <h2 className="font-medium">Сбросить пароль</h2>
+        <h2 className="font-medium">Reset password</h2>
         <p className="text-xs text-zinc-500">
-          Задайте новый пароль для юзера. После сохранения старый пароль перестанет работать.
+          Set a new password for the user. Once saved, the old password will stop working.
         </p>
         <ResetPasswordForm id={user.id} />
       </section>

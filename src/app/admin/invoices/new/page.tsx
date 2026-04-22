@@ -48,12 +48,13 @@ export default async function NewInvoicePage() {
           href="/admin/invoices"
           className="text-sm text-zinc-500 hover:text-zinc-900"
         >
-          ← К списку
+          ← Back to list
         </Link>
-        <h1 className="text-2xl font-semibold mt-2">Новый инвойс</h1>
+        <h1 className="text-2xl font-semibold mt-2">New invoice</h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Будет создан в статусе <code className="text-xs bg-zinc-100 px-1.5 rounded">draft</code>.
-          Номер присвоится при выпуске.
+          Will be created with status{" "}
+          <code className="text-xs bg-zinc-100 px-1.5 rounded">draft</code>. The
+          number is assigned when issued.
         </p>
       </div>
 

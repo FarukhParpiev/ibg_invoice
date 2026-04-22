@@ -21,7 +21,7 @@ export function ResetPasswordForm({ id }: { id: string }) {
     startTransition(async () => {
       const res = await resetUserPassword(id, values);
       if (res.ok) {
-        setMessage({ kind: "ok", text: "Пароль обновлён" });
+        setMessage({ kind: "ok", text: "Password updated" });
         reset({ password: "" });
       } else {
         setMessage({ kind: "error", text: res.error });
@@ -32,14 +32,14 @@ export function ResetPasswordForm({ id }: { id: string }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-zinc-700">Новый пароль</span>
+        <span className="text-zinc-700">New password</span>
         <input
           type="password"
           autoComplete="new-password"
           className="border rounded px-3 py-2 text-sm"
           {...register("password", {
-            required: "Введите новый пароль",
-            minLength: { value: 8, message: "Минимум 8 символов" },
+            required: "Enter a new password",
+            minLength: { value: 8, message: "Minimum 8 characters" },
           })}
         />
         {formState.errors.password && (
@@ -66,7 +66,7 @@ export function ResetPasswordForm({ id }: { id: string }) {
         disabled={isPending}
         className="border rounded px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-40"
       >
-        {isPending ? "Обновление…" : "Обновить пароль"}
+        {isPending ? "Updating…" : "Update password"}
       </button>
     </form>
   );
