@@ -19,9 +19,11 @@ export function PdfActions({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleGenerate = () => {
     setError(null);
+    setSuccess(false);
     startTransition(async () => {
       try {
         const res = await fetch(`/api/invoices/${invoiceId}/pdf`, {
@@ -35,6 +37,8 @@ export function PdfActions({
           setError(body.error ?? `Ошибка ${res.status}`);
           return;
         }
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 2500);
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка сети");
@@ -93,6 +97,12 @@ export function PdfActions({
       {error && (
         <div className="text-sm rounded bg-red-50 text-red-700 px-3 py-2">
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="text-sm rounded bg-green-50 text-green-700 px-3 py-2">
+          PDF обновлён ✓
         </div>
       )}
     </div>
