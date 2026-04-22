@@ -35,25 +35,52 @@ const templates = [
 
 const currencies = ["THB", "USD", "EUR", "RUB"] as const;
 
+// Из input type=number + valueAsNumber пустое поле приходит как NaN,
+// из обычного TSV/формы — как "". Приводим то и другое к 0, чтобы
+// Zod не падал с "expected number, received NaN".
+const numericField = (min?: number, max?: number) =>
+  z.preprocess(
+    (v) => {
+      if (v === "" || v == null) return 0;
+      const n = typeof v === "number" ? v : Number(v);
+      return Number.isNaN(n) ? 0 : n;
+    },
+    max !== undefined
+      ? z.number().min(min ?? Number.NEGATIVE_INFINITY).max(max)
+      : min !== undefined
+        ? z.number().min(min)
+        : z.number(),
+  );
+
 const itemSchema = z.discriminatedUnion("itemType", [
   z.object({
     itemType: z.literal("commission"),
     projectName: z.string().max(200).optional().or(z.literal("")),
     unitCode: z.string().max(100).optional().or(z.literal("")),
-    sellingPrice: z.coerce.number().min(0),
-    sellingPriceCorrection: z.coerce.number(),
-    commissionPercent: z.coerce.number().min(0).max(100),
-    commissionCorrection: z.coerce.number(),
+    sellingPrice: numericField(0),
+    sellingPriceCorrection: numericField(),
+    commissionPercent: numericField(0, 100),
+    commissionCorrection: numericField(),
     note: z.string().max(2000).optional().or(z.literal("")),
   }),
   z.object({
     itemType: z.literal("bonus"),
     projectName: z.string().max(200).optional().or(z.literal("")),
     unitCode: z.string().max(100).optional().or(z.literal("")),
-    bonusAmount: z.coerce.number(),
+    bonusAmount: numericField(),
     note: z.string().max(2000).optional().or(z.literal("")),
   }),
 ]);
+
+// Курс: пустое поле / NaN / undefined → null (необязательный).
+const exchangeRateField = z.preprocess(
+  (v) => {
+    if (v === "" || v == null) return null;
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isNaN(n) ? null : n;
+  },
+  z.number().positive().nullable(),
+).optional();
 
 const invoiceSchema = z.object({
   template: z.enum(templates),
@@ -64,7 +91,7 @@ const invoiceSchema = z.object({
 
   primaryCurrency: z.enum(currencies),
   showUsdEquivalent: z.boolean(),
-  exchangeRate: z.coerce.number().optional().nullable(),
+  exchangeRate: exchangeRateField,
 
   issueDate: z.string().min(1, "Дата обязательна"),
   dueDate: z.string().optional().or(z.literal("")),
