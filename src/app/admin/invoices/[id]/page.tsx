@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { InvoiceActions } from "./InvoiceActions";
+import { PdfActions } from "./PdfActions";
+import { DuplicateButton } from "./DuplicateButton";
 import type { InvoiceStatus } from "@prisma/client";
 
 const statusLabels: Record<InvoiceStatus, { text: string; cls: string }> = {
@@ -129,6 +131,16 @@ export default async function InvoiceDetailPage(
         status={invoice.status}
         type={invoice.type}
       />
+
+      <div className="border rounded-lg p-4 bg-white space-y-3">
+        <div className="text-xs uppercase tracking-wide text-zinc-500">PDF</div>
+        <PdfActions invoiceId={invoice.id} pdfUrl={invoice.pdfUrl} />
+        {invoice.type === "invoice" && (
+          <div className="pt-2 border-t">
+            <DuplicateButton invoiceId={invoice.id} />
+          </div>
+        )}
+      </div>
 
       <section className="grid grid-cols-2 gap-4">
         <Card title="Наша компания">

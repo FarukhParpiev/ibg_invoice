@@ -17,6 +17,8 @@ import {
   buildInvoiceNumber,
   buildReceiptNumber,
 } from "@/lib/invoice-number";
+import { writeAudit } from "@/lib/audit";
+import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
 
 // ────────────────────────────── Schemas ──────────────────────────────
 
@@ -213,6 +215,14 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
     },
   });
 
+  await writeAudit({
+    userId: session.user.id,
+    entity: "invoice",
+    entityId: created.id,
+    action: "create",
+    diff: { after: { template: v.template, total: totals.total } },
+  });
+
   revalidatePath("/admin/invoices");
   return { ok: true, id: created.id };
 }
@@ -221,7 +231,7 @@ export async function updateDraftInvoice(
   id: string,
   rawValues: unknown,
 ): Promise<Result> {
-  await requireSuperAdmin();
+  const session = await requireSuperAdmin();
   const parsed = invoiceSchema.safeParse(rawValues);
   if (!parsed.success) {
     return {
@@ -332,6 +342,14 @@ export async function updateDraftInvoice(
     });
   });
 
+  await writeAudit({
+    userId: session.user.id,
+    entity: "invoice",
+    entityId: id,
+    action: "update",
+    diff: { after: { template: v.template, total: totals.total } },
+  });
+
   revalidatePath("/admin/invoices");
   revalidatePath(`/admin/invoices/${id}`);
   return { ok: true, id };
@@ -368,6 +386,22 @@ export async function issueInvoice(id: string): Promise<Result> {
           },
         });
       });
+
+      await writeAudit({
+        userId: session.user.id,
+        entity: "invoice",
+        entityId: result.id,
+        action: "issue",
+        diff: { after: { number: result.number, serialNumber: result.serialNumber } },
+      });
+
+      // Автоматически генерируем PDF после issue. Ошибки логируем,
+      // но сам статус уже изменён — пользователь сможет нажать «Перегенерировать».
+      try {
+        await regenerateInvoicePdf(result.id, session.user.id);
+      } catch (err) {
+        console.error("[issueInvoice] PDF regenerate failed", err);
+      }
 
       revalidatePath("/admin/invoices");
       revalidatePath(`/admin/invoices/${id}`);
@@ -484,6 +518,26 @@ export async function payInvoice(
         return receipt.id;
       });
 
+      await writeAudit({
+        userId: session.user.id,
+        entity: "invoice",
+        entityId: id,
+        action: "pay",
+        diff: { after: { paidAt: paidAt.toISOString(), receiptId } },
+      });
+
+      // Регенерим оба PDF — родительский (теперь paid) и свежий receipt.
+      try {
+        await regenerateInvoicePdf(id, session.user.id);
+      } catch (err) {
+        console.error("[payInvoice] parent PDF regen failed", err);
+      }
+      try {
+        await regenerateInvoicePdf(receiptId, session.user.id);
+      } catch (err) {
+        console.error("[payInvoice] receipt PDF generate failed", err);
+      }
+
       revalidatePath("/admin/invoices");
       revalidatePath(`/admin/invoices/${id}`);
       revalidatePath(`/admin/invoices/${receiptId}`);
@@ -523,21 +577,123 @@ export async function cancelInvoice(
     },
   });
 
+  await writeAudit({
+    userId: session.user.id,
+    entity: "invoice",
+    entityId: id,
+    action: "cancel",
+    diff: { after: { reason: reason.trim() || null } },
+  });
+
+  // Перерисуем PDF с красным баннером CANCELLED, если у инвойса уже был PDF.
+  if (inv.pdfUrl) {
+    try {
+      await regenerateInvoicePdf(id, session.user.id);
+    } catch (err) {
+      console.error("[cancelInvoice] PDF regen failed", err);
+    }
+  }
+
   revalidatePath("/admin/invoices");
   revalidatePath(`/admin/invoices/${id}`);
   return { ok: true, id };
 }
 
 export async function deleteDraftInvoice(id: string) {
-  await requireSuperAdmin();
+  const session = await requireSuperAdmin();
   const inv = await prisma.invoice.findUnique({ where: { id } });
   if (!inv) return;
   if (inv.status !== "draft") {
     redirect(`/admin/invoices/${id}?error=notDraft`);
   }
   await prisma.invoice.delete({ where: { id } });
+  await writeAudit({
+    userId: session.user.id,
+    entity: "invoice",
+    entityId: id,
+    action: "delete",
+  });
   revalidatePath("/admin/invoices");
   redirect("/admin/invoices?deleted=1");
+}
+
+// ────────────────────────────── Duplicate ──────────────────────────────
+
+export async function duplicateInvoice(id: string): Promise<Result> {
+  const session = await requireSuperAdmin();
+  const src = await prisma.invoice.findUnique({
+    where: { id },
+    include: { items: { orderBy: { positionNo: "asc" } } },
+  });
+  if (!src) return { ok: false, error: "Инвойс не найден" };
+  if (src.type === "receipt") {
+    return { ok: false, error: "Receipt нельзя дублировать" };
+  }
+
+  const created = await prisma.invoice.create({
+    data: {
+      type: "invoice",
+      status: "draft",
+      template: src.template,
+
+      primaryCurrency: src.primaryCurrency,
+      showUsdEquivalent: src.showUsdEquivalent,
+      // Курс в копии НЕ копируем — draft не фиксирует курс
+      exchangeRate: null,
+      exchangeRateSource: null,
+      exchangeRateAt: null,
+
+      issueDate: new Date(),
+      dueDate: null,
+      otherDate: null,
+
+      vatApplied: src.vatApplied,
+      whtApplied: src.whtApplied,
+
+      subtotal: src.subtotal,
+      vatAmount: src.vatAmount,
+      whtAmount: src.whtAmount,
+      total: src.total,
+      subtotalUsd: null,
+      totalUsd: null,
+
+      notesText: src.notesText,
+
+      ourCompanyId: src.ourCompanyId,
+      ourBankAccountId: src.ourBankAccountId,
+      counterpartyId: src.counterpartyId,
+      paymentTermsId: src.paymentTermsId,
+
+      createdById: session.user.id,
+
+      items: {
+        create: src.items.map((it) => ({
+          positionNo: it.positionNo,
+          itemType: it.itemType,
+          projectName: it.projectName,
+          unitCode: it.unitCode,
+          sellingPrice: it.sellingPrice,
+          sellingPriceCorrection: it.sellingPriceCorrection,
+          commissionPercent: it.commissionPercent,
+          commissionCorrection: it.commissionCorrection,
+          bonusAmount: it.bonusAmount,
+          amount: it.amount,
+          note: it.note,
+        })),
+      },
+    },
+  });
+
+  await writeAudit({
+    userId: session.user.id,
+    entity: "invoice",
+    entityId: created.id,
+    action: "create",
+    diff: { after: { duplicatedFrom: id } },
+  });
+
+  revalidatePath("/admin/invoices");
+  return { ok: true, id: created.id };
 }
 
 // ────────────────────────────── utils ──────────────────────────────
