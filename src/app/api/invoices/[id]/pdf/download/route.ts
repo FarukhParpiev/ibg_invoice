@@ -1,8 +1,13 @@
 // GET /api/invoices/[id]/pdf/download
-// Auth-gated редирект на Vercel Blob. Если PDF ещё нет — регенерируем.
-// Требует super_admin.
+// Auth-gated стрим PDF из приватного Vercel Blob. Если PDF ещё нет —
+// регенерируем. Требует super_admin.
+//
+// Редирект не подходит: store приватный, blob.url требует токен, который
+// браузер не знает. Поэтому тянем поток через get() с серверным токеном
+// и отдаём клиенту напрямую.
 
 import { NextResponse } from "next/server";
+import { get } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
@@ -19,7 +24,7 @@ export async function GET(
 
   const inv = await prisma.invoice.findUnique({
     where: { id },
-    select: { pdfUrl: true },
+    select: { pdfUrl: true, number: true },
   });
   if (!inv) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -36,5 +41,19 @@ export async function GET(
     }
   }
 
-  return NextResponse.redirect(url, 302);
+  const result = await get(url, { access: "private" });
+  if (!result || result.statusCode !== 200 || !result.stream) {
+    return NextResponse.json({ error: "PDF не найден в хранилище" }, { status: 404 });
+  }
+
+  const filename = `${inv.number ?? "invoice"}.pdf`.replace(/[^A-Za-z0-9._-]/g, "_");
+  return new NextResponse(result.stream, {
+    status: 200,
+    headers: {
+      "Content-Type": result.blob.contentType ?? "application/pdf",
+      "Content-Length": String(result.blob.size ?? ""),
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
+    },
+  });
 }

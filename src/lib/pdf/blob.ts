@@ -1,7 +1,7 @@
-// Загрузка PDF в Vercel Blob + получение прямой (permalink) ссылки.
-// Путь делаем непредсказуемым: invoices/<invoiceId>/<timestamp>-<hash>.pdf,
-// чтобы сырой URL было сложно подобрать; для защищённой выдачи
-// используем auth-gated redirect (см. /api/invoices/[id]/pdf/download).
+// Загрузка PDF в Vercel Blob. Store настроен как private — отдаём
+// PDF только через auth-gated стрим /api/invoices/[id]/pdf/download.
+// blob.url в БД — это reference для последующего get(), не публичная
+// ссылка: напрямую из браузера открыть её нельзя, требуется токен.
 
 import { put, del } from "@vercel/blob";
 import { randomBytes } from "node:crypto";
@@ -27,7 +27,7 @@ export async function uploadInvoicePdf(
 ): Promise<UploadedPdf> {
   const pathname = makeKey(invoiceId, number);
   const blob = await put(pathname, pdf, {
-    access: "public",
+    access: "private",
     contentType: "application/pdf",
     addRandomSuffix: false,
   });
