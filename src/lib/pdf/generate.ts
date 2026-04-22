@@ -57,7 +57,10 @@ export async function renderHtmlToPdf(html: string): Promise<Buffer> {
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+      // Стандартные «безопасные» поля для печати документов: 15 мм со всех
+      // сторон. Принтеры срезают 5–8 мм по краям — меньше 12 мм ставить
+      // рискованно (часть текста уходит в обрез).
+      margin: { top: "15mm", right: "15mm", bottom: "15mm", left: "15mm" },
     });
     return Buffer.from(pdf);
   } finally {
