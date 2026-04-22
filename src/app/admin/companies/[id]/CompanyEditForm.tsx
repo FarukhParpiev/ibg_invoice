@@ -89,15 +89,6 @@ export function CompanyEditForm({
           />
         </Field>
 
-        <Field label="URL логотипа" error={errors.logoUrl?.message} wide>
-          <input
-            type="url"
-            placeholder="https://..."
-            className="input"
-            {...register("logoUrl")}
-          />
-        </Field>
-
         <label className="col-span-2 flex items-center gap-2 text-sm">
           <input type="checkbox" {...register("isActive")} />
           <span>Активна (отображается при выборе в инвойсе)</span>

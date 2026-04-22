@@ -39,7 +39,6 @@ export default async function CompanyEditPage(props: PageProps<"/admin/companies
           registrationNo: company.registrationNo ?? "",
           phone: company.phone ?? "",
           email: company.email ?? "",
-          logoUrl: company.logoUrl ?? "",
           defaultCurrency: company.defaultCurrency,
           isActive: company.isActive,
         }}

@@ -13,7 +13,6 @@ const companySchema = z.object({
   registrationNo: z.string().max(100).optional().or(z.literal("")),
   phone: z.string().max(100).optional().or(z.literal("")),
   email: z.string().email("Некорректный e-mail").or(z.literal("")),
-  logoUrl: z.string().url("Нужен URL").or(z.literal("")),
   defaultCurrency: z.enum(["THB", "USD", "EUR", "RUB"]),
   isActive: z.boolean(),
 });
@@ -47,7 +46,6 @@ export async function updateCompany(
       registrationNo: v.registrationNo || null,
       phone: v.phone || null,
       email: v.email || null,
-      logoUrl: v.logoUrl || null,
       defaultCurrency: v.defaultCurrency,
       isActive: v.isActive,
     },

@@ -115,7 +115,6 @@ model Company {
   registrationNo  String?
   phone           String?
   email           String?
-  logoUrl         String?
   defaultCurrency Currency  @default(THB)
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
