@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { BankAccountForm } from "../BankAccountForm";
 
 export default async function NewBankAccountPage(
   props: PageProps<"/admin/companies/[id]/banks/new">,
 ) {
+  await requireSuperAdmin();
   const { id } = await props.params;
   const company = await prisma.company.findUnique({ where: { id } });
   if (!company) notFound();

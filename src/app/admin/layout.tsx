@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
-import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { requireAdminAccess } from "@/lib/auth-helpers";
 
-const navItems = [
+// superAdminOnly=true — прячем пункт для роли `user`.
+// Наши компании и управление юзерами — только для super_admin.
+const navItems: Array<{ href: string; label: string; superAdminOnly?: boolean }> = [
   { href: "/admin", label: "Дашборд" },
   { href: "/admin/invoices", label: "Инвойсы" },
   { href: "/admin/receipts", label: "Receipts" },
-  { href: "/admin/companies", label: "Наши компании" },
+  { href: "/admin/companies", label: "Наши компании", superAdminOnly: true },
   { href: "/admin/counterparties", label: "Контрагенты" },
+  { href: "/admin/users", label: "Юзеры", superAdminOnly: true },
 ];
 
 export default async function AdminLayout({
@@ -15,7 +18,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireSuperAdmin();
+  const session = await requireAdminAccess();
+  const isSuperAdmin = session.user.role === "super_admin";
+  const visibleNav = navItems.filter(
+    (item) => !item.superAdminOnly || isSuperAdmin,
+  );
 
   return (
     <div className="min-h-screen grid grid-cols-[240px_1fr]">
@@ -28,7 +35,7 @@ export default async function AdminLayout({
         </div>
 
         <nav className="flex flex-col gap-1">
-          {navItems.map((item) => (
+          {visibleNav.map((item) => (
             <Link
               key={item.href}
               href={item.href}

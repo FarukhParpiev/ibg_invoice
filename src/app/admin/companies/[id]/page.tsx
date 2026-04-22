@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireSuperAdmin } from "@/lib/auth-helpers";
 import { CompanyEditForm } from "./CompanyEditForm";
 
 export default async function CompanyEditPage(props: PageProps<"/admin/companies/[id]">) {
+  await requireSuperAdmin();
   const { id } = await props.params;
   const sp = await props.searchParams;
 

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { requireSuperAdmin } from "@/lib/auth-helpers";
 
 export default async function CompaniesListPage() {
+  // Наши компании редактируем только мы — обычная роль `user` сюда не ходит.
+  await requireSuperAdmin();
+
   const companies = await prisma.company.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { bankAccounts: true } } },
