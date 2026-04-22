@@ -19,6 +19,10 @@ export type ItemInput =
   | {
       itemType: "bonus";
       bonusAmount: number;
+    }
+  | {
+      itemType: "other";
+      otherAmount: number;
     };
 
 // Сумма строки в «родной» валюте ввода (THB для ib_group_usd, иначе primary).
@@ -28,7 +32,10 @@ export function calcItemAmount(it: ItemInput): number {
     const base = sp * ((it.commissionPercent ?? 0) / 100);
     return round2(base + (it.commissionCorrection ?? 0));
   }
-  return round2(it.bonusAmount ?? 0);
+  if (it.itemType === "bonus") {
+    return round2(it.bonusAmount ?? 0);
+  }
+  return round2(it.otherAmount ?? 0);
 }
 
 // Итоговая сумма строки в USD для шаблона ib_group_usd.

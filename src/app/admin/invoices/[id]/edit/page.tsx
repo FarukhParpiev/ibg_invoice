@@ -70,26 +70,36 @@ export default async function EditInvoicePage(
     vatIncluded: invoice.vatIncluded,
     whtApplied: invoice.whtApplied,
     notesText: invoice.notesText ?? "",
-    items: invoice.items.map((it) =>
-      it.itemType === "commission"
-        ? {
-            itemType: "commission",
-            projectName: it.projectName ?? "",
-            unitCode: it.unitCode ?? "",
-            sellingPrice: Number(it.sellingPrice ?? 0),
-            sellingPriceCorrection: Number(it.sellingPriceCorrection ?? 0),
-            commissionPercent: Number(it.commissionPercent ?? 0),
-            commissionCorrection: Number(it.commissionCorrection ?? 0),
-            note: it.note ?? "",
-          }
-        : {
-            itemType: "bonus",
-            projectName: it.projectName ?? "",
-            unitCode: it.unitCode ?? "",
-            bonusAmount: Number(it.bonusAmount ?? 0),
-            note: it.note ?? "",
-          },
-    ),
+    items: invoice.items.map((it) => {
+      if (it.itemType === "commission") {
+        return {
+          itemType: "commission" as const,
+          projectName: it.projectName ?? "",
+          unitCode: it.unitCode ?? "",
+          sellingPrice: Number(it.sellingPrice ?? 0),
+          sellingPriceCorrection: Number(it.sellingPriceCorrection ?? 0),
+          commissionPercent: Number(it.commissionPercent ?? 0),
+          commissionCorrection: Number(it.commissionCorrection ?? 0),
+          note: it.note ?? "",
+        };
+      }
+      if (it.itemType === "bonus") {
+        return {
+          itemType: "bonus" as const,
+          projectName: it.projectName ?? "",
+          unitCode: it.unitCode ?? "",
+          bonusAmount: Number(it.bonusAmount ?? 0),
+          note: it.note ?? "",
+        };
+      }
+      return {
+        itemType: "other" as const,
+        projectName: it.projectName ?? "",
+        unitCode: it.unitCode ?? "",
+        otherAmount: Number(it.otherAmount ?? 0),
+        note: it.note ?? "",
+      };
+    }),
   };
 
   return (

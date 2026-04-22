@@ -18,6 +18,7 @@ type Dict = {
   amount: string;
   commission: string;
   bonus: string;
+  other: string;
   sellingPrice: string;
   subtotal: string;
   vat: string;
@@ -65,6 +66,7 @@ const dicts: Record<PdfLang, Dict> = {
     amount: "Amount",
     commission: "Commission",
     bonus: "Bonus",
+    other: "Other",
     sellingPrice: "Selling price",
     subtotal: "Subtotal",
     vat: "VAT 7%",
@@ -110,6 +112,7 @@ const dicts: Record<PdfLang, Dict> = {
     amount: "จำนวนเงิน",
     commission: "ค่าคอมมิชชั่น",
     bonus: "โบนัส",
+    other: "อื่นๆ",
     sellingPrice: "ราคาขาย",
     subtotal: "รวม",
     vat: "ภาษีมูลค่าเพิ่ม 7%",
@@ -155,6 +158,7 @@ const dicts: Record<PdfLang, Dict> = {
     amount: "Сумма",
     commission: "Комиссия",
     bonus: "Бонус",
+    other: "Прочее",
     sellingPrice: "Цена продажи",
     subtotal: "Итого",
     vat: "НДС 7%",

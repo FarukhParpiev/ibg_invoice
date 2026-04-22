@@ -228,6 +228,7 @@ enum ExchangeRateSource {
 enum ItemType {
   commission
   bonus
+  other
 }
 
 model Invoice {
@@ -347,6 +348,10 @@ model InvoiceItem {
 
   // Bonus = bonusAmount (в отдельной позиции)
   bonusAmount Decimal? @db.Decimal(18, 2)
+
+  // Other = произвольное назначение: название пишется в projectName,
+  // комментарий — в note, сумма — в otherAmount.
+  otherAmount Decimal? @db.Decimal(18, 2)
 
   amount Decimal @db.Decimal(18, 2) @default(0) // итог по строке
 

@@ -236,7 +236,9 @@ export default async function InvoiceDetailPage(
                     className={`text-xs px-2 py-0.5 rounded ${
                       it.itemType === "commission"
                         ? "bg-blue-50 text-blue-700"
-                        : "bg-purple-50 text-purple-700"
+                        : it.itemType === "bonus"
+                          ? "bg-purple-50 text-purple-700"
+                          : "bg-orange-50 text-orange-700"
                     }`}
                   >
                     {it.itemType}
@@ -261,8 +263,10 @@ export default async function InvoiceDetailPage(
                       {Number(it.commissionCorrection) !== 0 &&
                         ` (+${fmt(it.commissionCorrection)})`}
                     </>
-                  ) : (
+                  ) : it.itemType === "bonus" ? (
                     <>Bonus: {fmt(it.bonusAmount)}</>
+                  ) : (
+                    <>Other: {fmt(it.otherAmount)}</>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right font-medium tabular-nums">

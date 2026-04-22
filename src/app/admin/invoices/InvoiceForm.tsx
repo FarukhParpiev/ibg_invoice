@@ -109,17 +109,27 @@ export function InvoiceForm({
 
   const totals = useMemo(() => {
     return calcTotals({
-      items: (watchedItems ?? []).map((it) =>
-        it.itemType === "commission"
-          ? {
-              itemType: "commission",
-              sellingPrice: Number(it.sellingPrice) || 0,
-              sellingPriceCorrection: Number(it.sellingPriceCorrection) || 0,
-              commissionPercent: Number(it.commissionPercent) || 0,
-              commissionCorrection: Number(it.commissionCorrection) || 0,
-            }
-          : { itemType: "bonus", bonusAmount: Number(it.bonusAmount) || 0 },
-      ),
+      items: (watchedItems ?? []).map((it) => {
+        if (it.itemType === "commission") {
+          return {
+            itemType: "commission" as const,
+            sellingPrice: Number(it.sellingPrice) || 0,
+            sellingPriceCorrection: Number(it.sellingPriceCorrection) || 0,
+            commissionPercent: Number(it.commissionPercent) || 0,
+            commissionCorrection: Number(it.commissionCorrection) || 0,
+          };
+        }
+        if (it.itemType === "bonus") {
+          return {
+            itemType: "bonus" as const,
+            bonusAmount: Number(it.bonusAmount) || 0,
+          };
+        }
+        return {
+          itemType: "other" as const,
+          otherAmount: Number(it.otherAmount) || 0,
+        };
+      }),
       vatApplied: !!vatApplied,
       vatIncluded: !!vatIncluded,
       whtApplied: !!whtApplied,
@@ -389,6 +399,21 @@ export function InvoiceForm({
             >
               + Bonus
             </button>
+            <button
+              type="button"
+              onClick={() =>
+                append({
+                  itemType: "other",
+                  projectName: "",
+                  unitCode: "",
+                  otherAmount: 0,
+                  note: "",
+                })
+              }
+              className="text-sm border rounded px-3 py-1.5 hover:bg-zinc-50"
+            >
+              + Другое
+            </button>
           </div>
         </div>
 
@@ -408,8 +433,7 @@ export function InvoiceForm({
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs uppercase text-zinc-500">
-                    Позиция {idx + 1} ·{" "}
-                    {itemType === "commission" ? "commission" : "bonus"}
+                    Позиция {idx + 1} · {itemType}
                   </span>
                   <button
                     type="button"
@@ -427,18 +451,20 @@ export function InvoiceForm({
                 />
 
                 <div className="grid grid-cols-4 gap-3">
-                  <Field label="Проект">
+                  <Field label={itemType === "other" ? "Название (за что платят)" : "Проект"}>
                     <input
                       className="input"
                       {...register(`items.${idx}.projectName` as const)}
                     />
                   </Field>
-                  <Field label="Unit / код">
-                    <input
-                      className="input"
-                      {...register(`items.${idx}.unitCode` as const)}
-                    />
-                  </Field>
+                  {itemType !== "other" && (
+                    <Field label="Unit / код">
+                      <input
+                        className="input"
+                        {...register(`items.${idx}.unitCode` as const)}
+                      />
+                    </Field>
+                  )}
 
                   {itemType === "commission" ? (
                     <>
@@ -502,7 +528,7 @@ export function InvoiceForm({
                         />
                       </Field>
                     </>
-                  ) : (
+                  ) : itemType === "bonus" ? (
                     <Field
                       label={isUsdTemplate ? "Bonus amount (THB)" : "Bonus amount"}
                       wide
@@ -512,6 +538,20 @@ export function InvoiceForm({
                         step="0.01"
                         className="input"
                         {...register(`items.${idx}.bonusAmount` as const, {
+                          valueAsNumber: true,
+                        })}
+                      />
+                    </Field>
+                  ) : (
+                    <Field
+                      label={isUsdTemplate ? "Сумма (THB)" : "Сумма"}
+                      wide
+                    >
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="input"
+                        {...register(`items.${idx}.otherAmount` as const, {
                           valueAsNumber: true,
                         })}
                       />
@@ -731,7 +771,10 @@ function LineTotal({
       const sp = (Number(item.sellingPrice) || 0) + (Number(item.sellingPriceCorrection) || 0);
       return sp * ((Number(item.commissionPercent) || 0) / 100) + (Number(item.commissionCorrection) || 0);
     }
-    return Number(item.bonusAmount) || 0;
+    if (item.itemType === "bonus") {
+      return Number(item.bonusAmount) || 0;
+    }
+    return Number(item.otherAmount) || 0;
   }, [item]);
 
   const fmt = (n: number) =>

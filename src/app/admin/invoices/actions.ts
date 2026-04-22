@@ -70,6 +70,14 @@ const itemSchema = z.discriminatedUnion("itemType", [
     bonusAmount: numericField(),
     note: z.string().max(2000).optional().or(z.literal("")),
   }),
+  z.object({
+    itemType: z.literal("other"),
+    // Для other: projectName = «Название» (за что платят), note = «Комментарий».
+    projectName: z.string().max(200).optional().or(z.literal("")),
+    unitCode: z.string().max(100).optional().or(z.literal("")),
+    otherAmount: numericField(),
+    note: z.string().max(2000).optional().or(z.literal("")),
+  }),
 ]);
 
 // Курс: пустое поле / NaN / undefined → null (необязательный).
@@ -121,17 +129,21 @@ function parseDateOrNull(s: string | null | undefined): Date | null {
 }
 
 function itemsToTotalsInput(items: InvoiceItemFormValues[]): ItemInput[] {
-  return items.map((it) =>
-    it.itemType === "commission"
-      ? {
-          itemType: "commission" as const,
-          sellingPrice: it.sellingPrice,
-          sellingPriceCorrection: it.sellingPriceCorrection,
-          commissionPercent: it.commissionPercent,
-          commissionCorrection: it.commissionCorrection,
-        }
-      : { itemType: "bonus" as const, bonusAmount: it.bonusAmount },
-  );
+  return items.map((it) => {
+    if (it.itemType === "commission") {
+      return {
+        itemType: "commission" as const,
+        sellingPrice: it.sellingPrice,
+        sellingPriceCorrection: it.sellingPriceCorrection,
+        commissionPercent: it.commissionPercent,
+        commissionCorrection: it.commissionCorrection,
+      };
+    }
+    if (it.itemType === "bonus") {
+      return { itemType: "bonus" as const, bonusAmount: it.bonusAmount };
+    }
+    return { itemType: "other" as const, otherAmount: it.otherAmount };
+  });
 }
 
 function isUsdConversionTemplate(tpl: InvoiceFormValues["template"]): boolean {
@@ -155,7 +167,9 @@ function buildItemsCreate(
             commissionPercent: it.commissionPercent,
             commissionCorrection: it.commissionCorrection,
           }
-        : { itemType: "bonus", bonusAmount: it.bonusAmount };
+        : it.itemType === "bonus"
+          ? { itemType: "bonus", bonusAmount: it.bonusAmount }
+          : { itemType: "other", otherAmount: it.otherAmount };
     const amount = opts.convertThbToUsd
       ? calcItemAmountUsd(input, opts.rate)
       : calcItemAmount(input);
@@ -180,6 +194,8 @@ function buildItemsCreate(
           : null,
       bonusAmount:
         it.itemType === "bonus" ? toDecimalOrNull(it.bonusAmount) : null,
+      otherAmount:
+        it.itemType === "other" ? toDecimalOrNull(it.otherAmount) : null,
       amount: toDecimal(amount),
       note: it.note || null,
     };
@@ -549,6 +565,7 @@ export async function payInvoice(
                 commissionPercent: it.commissionPercent,
                 commissionCorrection: it.commissionCorrection,
                 bonusAmount: it.bonusAmount,
+                otherAmount: it.otherAmount,
                 amount: it.amount,
                 note: it.note,
               })),
@@ -719,6 +736,7 @@ export async function duplicateInvoice(id: string): Promise<Result> {
           commissionPercent: it.commissionPercent,
           commissionCorrection: it.commissionCorrection,
           bonusAmount: it.bonusAmount,
+          otherAmount: it.otherAmount,
           amount: it.amount,
           note: it.note,
         })),

@@ -95,7 +95,10 @@ function calcItemThbAmount(it: InvoicePdfData["items"][number]): number {
     const base = sp * (Number(it.commissionPercent ?? 0) / 100);
     return base + Number(it.commissionCorrection ?? 0);
   }
-  return Number(it.bonusAmount ?? 0);
+  if (it.itemType === "bonus") {
+    return Number(it.bonusAmount ?? 0);
+  }
+  return Number(it.otherAmount ?? 0);
 }
 
 export function renderInvoiceHtml(invoice: InvoicePdfData): string {
@@ -129,7 +132,12 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
 
   const itemsRows = invoice.items
     .map((it) => {
-      const typeLabel = it.itemType === "commission" ? L.commission : L.bonus;
+      const typeLabel =
+        it.itemType === "commission"
+          ? L.commission
+          : it.itemType === "bonus"
+            ? L.bonus
+            : L.other;
       const descLines = [
         it.projectName ? `<div>${escapeHtml(it.projectName)}</div>` : "",
         it.unitCode
@@ -277,6 +285,7 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
   .type-badge { display: inline-block; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 5px; border-radius: 3px; margin-bottom: 1px; }
   .type-commission { background: #eef3ff; color: #1e40af; }
   .type-bonus { background: #f5edff; color: #6d28d9; }
+  .type-other { background: #fff7ed; color: #9a3412; }
   .muted { color: #777; font-size: 8.5pt; }
   .totals { margin-left: auto; width: 280px; margin-bottom: 10px; }
   .totals .row { display: flex; justify-content: space-between; padding: 2px 0; }
