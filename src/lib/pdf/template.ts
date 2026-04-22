@@ -56,6 +56,19 @@ function escapeHtml(s: string | null | undefined): string {
     .replace(/'/g, "&#039;");
 }
 
+// THB-сумма строки (до деления на курс). Для commission собирается из
+// sellingPrice+spCorr × % + commCorr; для bonus — сам bonusAmount.
+// Inputs в БД всегда в «базовой» валюте (для ib_group_usd это THB),
+// что позволяет восстановить THB-срез детерминированно.
+function calcItemThbAmount(it: InvoicePdfData["items"][number]): number {
+  if (it.itemType === "commission") {
+    const sp = Number(it.sellingPrice ?? 0) + Number(it.sellingPriceCorrection ?? 0);
+    const base = sp * (Number(it.commissionPercent ?? 0) / 100);
+    return base + Number(it.commissionCorrection ?? 0);
+  }
+  return Number(it.bonusAmount ?? 0);
+}
+
 export function renderInvoiceHtml(invoice: InvoicePdfData): string {
   const lang = invoice.counterparty.preferredLanguage as PdfLang;
   const L = t(lang);
@@ -63,6 +76,8 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
   const isReceipt = invoice.type === "receipt";
   const isCash = invoice.template === "ibg_kas";
   const isCrypto = invoice.template === "crypto";
+  const isUsdTemplate = invoice.template === "ib_group_usd";
+  const rate = invoice.exchangeRate ? Number(invoice.exchangeRate) : 0;
 
   const title = isReceipt ? L.receipt : L.invoice;
   const number = invoice.number ?? "—";
@@ -109,6 +124,22 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
             }</div>`
           : "";
 
+      if (isUsdTemplate) {
+        const thb = calcItemThbAmount(it);
+        return `
+          <tr>
+            <td class="col-no">${it.positionNo}</td>
+            <td>
+              <div class="type-badge type-${it.itemType}">${escapeHtml(typeLabel)}</div>
+              ${descLines}
+              ${details}
+            </td>
+            <td class="col-amount">${fmt(thb, lang)}</td>
+            <td class="col-amount">${fmt(it.amount, lang)}</td>
+          </tr>
+        `;
+      }
+
       return `
         <tr>
           <td class="col-no">${it.positionNo}</td>
@@ -122,6 +153,15 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
       `;
     })
     .join("");
+
+  // USD-шаблон: справочные THB-суммы. Sum(line THB) = subtotalThb,
+  // ±VAT/WHT в тех же процентах поверх; total THB = subtotalThb + vat - wht.
+  const subtotalThb = isUsdTemplate
+    ? invoice.items.reduce((s, it) => s + calcItemThbAmount(it), 0)
+    : 0;
+  const vatThb = isUsdTemplate && invoice.vatApplied ? subtotalThb * 0.07 : 0;
+  const whtThb = isUsdTemplate && invoice.whtApplied ? subtotalThb * 0.03 : 0;
+  const totalThb = subtotalThb + vatThb - whtThb;
 
   const paymentSection = isCash
     ? `<div class="pay-block"><strong>${escapeHtml(L.cash)}</strong></div>`
@@ -251,7 +291,34 @@ ${paidBanner}
   </div>
 </div>
 
-<table class="items">
+${
+  isUsdTemplate
+    ? `<table class="items">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>${escapeHtml(L.description)}</th>
+      <th style="text-align:right">${escapeHtml(L.commission)} THB</th>
+      <th style="text-align:right">${escapeHtml(L.commission)} USD</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${itemsRows}
+  </tbody>
+</table>
+
+<div class="totals">
+  <div class="row"><span>${escapeHtml(L.subtotal)} (THB)</span><span class="v">${fmt(subtotalThb, lang)} THB</span></div>
+  <div class="row"><span>${escapeHtml(L.subtotal)} (USD)</span><span class="v">${fmt(invoice.subtotal, lang)} USD</span></div>
+  ${invoice.vatApplied ? `<div class="row"><span>${escapeHtml(L.vat)} (USD)</span><span class="v">${fmt(invoice.vatAmount, lang)} USD</span></div>` : ""}
+  ${invoice.whtApplied ? `<div class="row"><span>${escapeHtml(L.wht)} (USD)</span><span class="v">− ${fmt(invoice.whtAmount, lang)} USD</span></div>` : ""}
+  <div class="row grand"><span>${escapeHtml(L.total)}</span><span class="v">${fmt(invoice.total, lang)} USD</span></div>
+  <div class="usd-box">
+    <div class="row"><span>${escapeHtml(L.total)} (THB, справочно)</span><span class="v">${fmt(totalThb, lang)} THB</span></div>
+    ${rate > 0 ? `<div class="row"><span>${escapeHtml(L.exchangeRate)}</span><span class="v">1 USD = ${fmt(rate, lang)} THB</span></div>` : ""}
+  </div>
+</div>`
+    : `<table class="items">
   <thead>
     <tr>
       <th>#</th>
@@ -277,7 +344,8 @@ ${paidBanner}
          </div>`
       : ""
   }
-</div>
+</div>`
+}
 
 ${paymentSection}
 

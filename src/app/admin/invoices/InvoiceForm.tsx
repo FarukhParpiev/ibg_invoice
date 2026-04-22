@@ -99,6 +99,11 @@ export function InvoiceForm({
   const showUsdEquivalent = useWatch({ control, name: "showUsdEquivalent" });
   const primaryCurrency = useWatch({ control, name: "primaryCurrency" });
   const ourCompanyId = useWatch({ control, name: "ourCompanyId" });
+  const template = useWatch({ control, name: "template" });
+
+  // Для шаблона IB Group USD ввод идёт в THB, amount считается в USD
+  // через курс. Отдельный режим в форме и в PDF.
+  const isUsdTemplate = template === "ib_group_usd";
 
   const totals = useMemo(() => {
     return calcTotals({
@@ -117,8 +122,16 @@ export function InvoiceForm({
       whtApplied: !!whtApplied,
       exchangeRate: exchangeRate ? Number(exchangeRate) : null,
       showUsdEquivalent: !!showUsdEquivalent,
+      convertThbToUsd: isUsdTemplate,
     });
-  }, [watchedItems, vatApplied, whtApplied, exchangeRate, showUsdEquivalent]);
+  }, [
+    watchedItems,
+    vatApplied,
+    whtApplied,
+    exchangeRate,
+    showUsdEquivalent,
+    isUsdTemplate,
+  ]);
 
   const currentCompany = ctx.companies.find((c) => c.id === ourCompanyId);
   const availableBanks = currentCompany?.bankAccounts ?? [];
@@ -154,7 +167,20 @@ export function InvoiceForm({
         <h2 className="font-medium">Реквизиты</h2>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Шаблон PDF">
-            <select className="input" {...register("template")}>
+            <select
+              className="input"
+              {...register("template", {
+                onChange: (e) => {
+                  if (e.target.value === "ib_group_usd") {
+                    // Для USD-шаблона primary всегда USD, show/equivalent не используется
+                    setValue("primaryCurrency", "USD", { shouldDirty: true });
+                    setValue("showUsdEquivalent", false, {
+                      shouldDirty: true,
+                    });
+                  }
+                },
+              })}
+            >
               {templateOptions.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
@@ -251,7 +277,11 @@ export function InvoiceForm({
           </Field>
 
           <Field label="Primary currency">
-            <select className="input" {...register("primaryCurrency")}>
+            <select
+              className="input"
+              disabled={isUsdTemplate}
+              {...register("primaryCurrency")}
+            >
               <option value="THB">THB</option>
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
@@ -259,23 +289,42 @@ export function InvoiceForm({
             </select>
           </Field>
 
-          <div className="col-span-2 flex items-center gap-4 pt-5">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" {...register("showUsdEquivalent")} />
-              <span>Показать эквивалент в USD</span>
-            </label>
-            {showUsdEquivalent && primaryCurrency !== "USD" && (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-zinc-600">Курс (THB за 1 USD):</span>
-                <input
-                  type="number"
-                  step="0.0001"
-                  className="input w-32"
-                  {...register("exchangeRate", { valueAsNumber: true })}
-                />
-              </div>
-            )}
-          </div>
+          {isUsdTemplate ? (
+            <div className="col-span-2 flex items-center gap-3 pt-5 text-sm">
+              <span className="text-zinc-700 font-medium">
+                Курс THB → USD:
+              </span>
+              <input
+                type="number"
+                step="0.0001"
+                placeholder="напр. 34.5"
+                className="input w-36"
+                {...register("exchangeRate", { valueAsNumber: true })}
+              />
+              <span className="text-xs text-zinc-500">
+                Commission (USD) = Commission (THB) / Rate. Фиксируется при
+                Issue.
+              </span>
+            </div>
+          ) : (
+            <div className="col-span-2 flex items-center gap-4 pt-5">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" {...register("showUsdEquivalent")} />
+                <span>Показать эквивалент в USD</span>
+              </label>
+              {showUsdEquivalent && primaryCurrency !== "USD" && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-zinc-600">Курс (THB за 1 USD):</span>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    className="input w-32"
+                    {...register("exchangeRate", { valueAsNumber: true })}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <label className="flex items-center gap-2 text-sm col-span-1">
             <input type="checkbox" {...register("vatApplied")} />
@@ -379,7 +428,11 @@ export function InvoiceForm({
 
                   {itemType === "commission" ? (
                     <>
-                      <Field label="Selling price">
+                      <Field
+                        label={
+                          isUsdTemplate ? "Selling price (THB)" : "Selling price"
+                        }
+                      >
                         <input
                           type="number"
                           step="0.01"
@@ -389,7 +442,13 @@ export function InvoiceForm({
                           })}
                         />
                       </Field>
-                      <Field label="Correction (sp)">
+                      <Field
+                        label={
+                          isUsdTemplate
+                            ? "Correction (THB)"
+                            : "Correction (sp)"
+                        }
+                      >
                         <input
                           type="number"
                           step="0.01"
@@ -411,7 +470,13 @@ export function InvoiceForm({
                           )}
                         />
                       </Field>
-                      <Field label="Correction (comm)">
+                      <Field
+                        label={
+                          isUsdTemplate
+                            ? "Correction comm. (THB)"
+                            : "Correction (comm)"
+                        }
+                      >
                         <input
                           type="number"
                           step="0.01"
@@ -424,7 +489,10 @@ export function InvoiceForm({
                       </Field>
                     </>
                   ) : (
-                    <Field label="Bonus amount" wide>
+                    <Field
+                      label={isUsdTemplate ? "Bonus amount (THB)" : "Bonus amount"}
+                      wide
+                    >
                       <input
                         type="number"
                         step="0.01"
@@ -444,7 +512,12 @@ export function InvoiceForm({
                   </Field>
                 </div>
 
-                <LineTotal idx={idx} form={form} />
+                <LineTotal
+                  idx={idx}
+                  form={form}
+                  isUsdTemplate={isUsdTemplate}
+                  rate={exchangeRate ? Number(exchangeRate) : 0}
+                />
               </div>
             );
           })}
@@ -453,9 +526,17 @@ export function InvoiceForm({
 
       {/* ───── Итоги ───── */}
       <section className="border rounded-lg p-5 bg-zinc-50 space-y-2 text-sm tabular-nums">
-        <Row label="Subtotal" value={totals.subtotal} currency={primaryCurrency} />
+        <Row
+          label="Subtotal"
+          value={totals.subtotal}
+          currency={primaryCurrency}
+        />
         {vatApplied && (
-          <Row label="VAT 7%" value={totals.vatAmount} currency={primaryCurrency} />
+          <Row
+            label="VAT 7%"
+            value={totals.vatAmount}
+            currency={primaryCurrency}
+          />
         )}
         {whtApplied && (
           <Row
@@ -472,9 +553,44 @@ export function InvoiceForm({
             bold
           />
         </div>
-        {showUsdEquivalent && totals.totalUsd != null && (
+
+        {/* USD-шаблон: THB-справка + курс */}
+        {isUsdTemplate && totals.totalThb != null && (
+          <div className="pt-2 border-t text-zinc-600 space-y-1">
+            <Row
+              label="Subtotal (THB, справочно)"
+              value={totals.subtotalThb ?? 0}
+              currency="THB"
+            />
+            <Row
+              label="Total (THB, справочно)"
+              value={totals.totalThb}
+              currency="THB"
+            />
+            {exchangeRate ? (
+              <div className="text-xs text-zinc-500 text-right pt-1">
+                Rate: 1 USD = {Number(exchangeRate).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 4,
+                })}{" "}
+                THB
+              </div>
+            ) : (
+              <div className="text-xs text-red-600 text-right pt-1">
+                Курс не указан — USD-суммы не посчитаны
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Обычный режим: эквивалент в USD */}
+        {!isUsdTemplate && showUsdEquivalent && totals.totalUsd != null && (
           <div className="pt-2 text-zinc-600">
-            <Row label="Total USD (эквивалент)" value={totals.totalUsd} currency="USD" />
+            <Row
+              label="Total USD (эквивалент)"
+              value={totals.totalUsd}
+              currency="USD"
+            />
           </div>
         )}
       </section>
@@ -586,12 +702,16 @@ function Row({
 function LineTotal({
   idx,
   form,
+  isUsdTemplate,
+  rate,
 }: {
   idx: number;
   form: ReturnType<typeof useForm<InvoiceFormValues>>;
+  isUsdTemplate: boolean;
+  rate: number;
 }) {
   const item = useWatch({ control: form.control, name: `items.${idx}` });
-  const amount = useMemo(() => {
+  const amountThb = useMemo(() => {
     if (!item) return 0;
     if (item.itemType === "commission") {
       const sp = (Number(item.sellingPrice) || 0) + (Number(item.sellingPriceCorrection) || 0);
@@ -600,15 +720,34 @@ function LineTotal({
     return Number(item.bonusAmount) || 0;
   }, [item]);
 
+  const fmt = (n: number) =>
+    n.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  if (isUsdTemplate) {
+    const usd = rate > 0 ? amountThb / rate : 0;
+    return (
+      <div className="text-right text-sm tabular-nums space-y-0.5">
+        <div>
+          <span className="text-zinc-500">Commission (THB): </span>
+          <span className="font-medium">{fmt(amountThb)}</span>
+        </div>
+        <div>
+          <span className="text-zinc-500">Commission (USD): </span>
+          <span className="font-medium">
+            {rate > 0 ? fmt(usd) : "— укажите курс"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="text-right text-sm tabular-nums">
       <span className="text-zinc-500">Сумма позиции: </span>
-      <span className="font-medium">
-        {amount.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}
-      </span>
+      <span className="font-medium">{fmt(amountThb)}</span>
     </div>
   );
 }

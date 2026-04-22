@@ -8,6 +8,7 @@ import { requireSuperAdmin } from "@/lib/auth-helpers";
 import {
   calcTotals,
   calcItemAmount,
+  calcItemAmountUsd,
   toDecimal,
   toDecimalOrNull,
   type ItemInput,
@@ -105,6 +106,58 @@ function itemsToTotalsInput(items: InvoiceItemFormValues[]): ItemInput[] {
   );
 }
 
+function isUsdConversionTemplate(tpl: InvoiceFormValues["template"]): boolean {
+  return tpl === "ib_group_usd";
+}
+
+// Собирает payload для nested create позиций. Для шаблона ib_group_usd
+// amount считается в USD (делится на rate); исходные THB-поля сохраняются
+// в том же виде, в каком ввёл пользователь — их всегда можно пересчитать.
+function buildItemsCreate(
+  items: InvoiceItemFormValues[],
+  opts: { convertThbToUsd: boolean; rate: number },
+) {
+  return items.map((it, idx) => {
+    const input: ItemInput =
+      it.itemType === "commission"
+        ? {
+            itemType: "commission",
+            sellingPrice: it.sellingPrice,
+            sellingPriceCorrection: it.sellingPriceCorrection,
+            commissionPercent: it.commissionPercent,
+            commissionCorrection: it.commissionCorrection,
+          }
+        : { itemType: "bonus", bonusAmount: it.bonusAmount };
+    const amount = opts.convertThbToUsd
+      ? calcItemAmountUsd(input, opts.rate)
+      : calcItemAmount(input);
+    return {
+      positionNo: idx + 1,
+      itemType: it.itemType,
+      projectName: it.projectName || null,
+      unitCode: it.unitCode || null,
+      sellingPrice:
+        it.itemType === "commission" ? toDecimalOrNull(it.sellingPrice) : null,
+      sellingPriceCorrection:
+        it.itemType === "commission"
+          ? toDecimalOrNull(it.sellingPriceCorrection)
+          : null,
+      commissionPercent:
+        it.itemType === "commission"
+          ? toDecimalOrNull(it.commissionPercent)
+          : null,
+      commissionCorrection:
+        it.itemType === "commission"
+          ? toDecimalOrNull(it.commissionCorrection)
+          : null,
+      bonusAmount:
+        it.itemType === "bonus" ? toDecimalOrNull(it.bonusAmount) : null,
+      amount: toDecimal(amount),
+      note: it.note || null,
+    };
+  });
+}
+
 // ────────────────────────────── Create/Edit ──────────────────────────────
 
 export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
@@ -129,12 +182,27 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
   const issueDate = parseDateOrNull(v.issueDate);
   if (!issueDate) return { ok: false, error: "Некорректная дата выпуска" };
 
+  const convertThbToUsd = isUsdConversionTemplate(v.template);
+  const rate = v.exchangeRate ? Number(v.exchangeRate) : 0;
+
+  if (convertThbToUsd && rate <= 0) {
+    return {
+      ok: false,
+      error: "Для шаблона IB Group USD укажите курс THB → USD",
+    };
+  }
+
+  // Для ib_group_usd primary всегда USD, курс обязательный.
+  const primaryCurrency = convertThbToUsd ? "USD" : v.primaryCurrency;
+  const showUsdEquivalent = convertThbToUsd ? false : v.showUsdEquivalent;
+
   const totals = calcTotals({
     items: itemsToTotalsInput(v.items),
     vatApplied: v.vatApplied,
     whtApplied: v.whtApplied,
     exchangeRate: v.exchangeRate ?? null,
-    showUsdEquivalent: v.showUsdEquivalent,
+    showUsdEquivalent,
+    convertThbToUsd,
   });
 
   const created = await prisma.invoice.create({
@@ -143,8 +211,8 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
       status: "draft",
       template: v.template,
 
-      primaryCurrency: v.primaryCurrency,
-      showUsdEquivalent: v.showUsdEquivalent,
+      primaryCurrency,
+      showUsdEquivalent,
       exchangeRate: toDecimalOrNull(v.exchangeRate ?? null),
       exchangeRateSource: v.exchangeRate ? "manual" : null,
       exchangeRateAt: v.exchangeRate ? new Date() : null,
@@ -173,44 +241,7 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
       createdById: session.user.id,
 
       items: {
-        create: v.items.map((it, idx) => ({
-          positionNo: idx + 1,
-          itemType: it.itemType,
-          projectName: it.projectName || null,
-          unitCode: it.unitCode || null,
-          sellingPrice:
-            it.itemType === "commission"
-              ? toDecimalOrNull(it.sellingPrice)
-              : null,
-          sellingPriceCorrection:
-            it.itemType === "commission"
-              ? toDecimalOrNull(it.sellingPriceCorrection)
-              : null,
-          commissionPercent:
-            it.itemType === "commission"
-              ? toDecimalOrNull(it.commissionPercent)
-              : null,
-          commissionCorrection:
-            it.itemType === "commission"
-              ? toDecimalOrNull(it.commissionCorrection)
-              : null,
-          bonusAmount:
-            it.itemType === "bonus" ? toDecimalOrNull(it.bonusAmount) : null,
-          amount: toDecimal(
-            calcItemAmount(
-              it.itemType === "commission"
-                ? {
-                    itemType: "commission",
-                    sellingPrice: it.sellingPrice,
-                    sellingPriceCorrection: it.sellingPriceCorrection,
-                    commissionPercent: it.commissionPercent,
-                    commissionCorrection: it.commissionCorrection,
-                  }
-                : { itemType: "bonus", bonusAmount: it.bonusAmount },
-            ),
-          ),
-          note: it.note || null,
-        })),
+        create: buildItemsCreate(v.items, { convertThbToUsd, rate }),
       },
     },
   });
@@ -257,12 +288,26 @@ export async function updateDraftInvoice(
   const issueDate = parseDateOrNull(v.issueDate);
   if (!issueDate) return { ok: false, error: "Некорректная дата выпуска" };
 
+  const convertThbToUsd = isUsdConversionTemplate(v.template);
+  const rate = v.exchangeRate ? Number(v.exchangeRate) : 0;
+
+  if (convertThbToUsd && rate <= 0) {
+    return {
+      ok: false,
+      error: "Для шаблона IB Group USD укажите курс THB → USD",
+    };
+  }
+
+  const primaryCurrency = convertThbToUsd ? "USD" : v.primaryCurrency;
+  const showUsdEquivalent = convertThbToUsd ? false : v.showUsdEquivalent;
+
   const totals = calcTotals({
     items: itemsToTotalsInput(v.items),
     vatApplied: v.vatApplied,
     whtApplied: v.whtApplied,
     exchangeRate: v.exchangeRate ?? null,
-    showUsdEquivalent: v.showUsdEquivalent,
+    showUsdEquivalent,
+    convertThbToUsd,
   });
 
   await prisma.$transaction(async (tx) => {
@@ -271,8 +316,8 @@ export async function updateDraftInvoice(
       where: { id },
       data: {
         template: v.template,
-        primaryCurrency: v.primaryCurrency,
-        showUsdEquivalent: v.showUsdEquivalent,
+        primaryCurrency,
+        showUsdEquivalent,
         exchangeRate: toDecimalOrNull(v.exchangeRate ?? null),
         exchangeRateSource: v.exchangeRate ? "manual" : null,
         exchangeRateAt: v.exchangeRate ? new Date() : null,
@@ -299,44 +344,7 @@ export async function updateDraftInvoice(
         paymentTermsId: v.paymentTermsId || null,
 
         items: {
-          create: v.items.map((it, idx) => ({
-            positionNo: idx + 1,
-            itemType: it.itemType,
-            projectName: it.projectName || null,
-            unitCode: it.unitCode || null,
-            sellingPrice:
-              it.itemType === "commission"
-                ? toDecimalOrNull(it.sellingPrice)
-                : null,
-            sellingPriceCorrection:
-              it.itemType === "commission"
-                ? toDecimalOrNull(it.sellingPriceCorrection)
-                : null,
-            commissionPercent:
-              it.itemType === "commission"
-                ? toDecimalOrNull(it.commissionPercent)
-                : null,
-            commissionCorrection:
-              it.itemType === "commission"
-                ? toDecimalOrNull(it.commissionCorrection)
-                : null,
-            bonusAmount:
-              it.itemType === "bonus" ? toDecimalOrNull(it.bonusAmount) : null,
-            amount: toDecimal(
-              calcItemAmount(
-                it.itemType === "commission"
-                  ? {
-                      itemType: "commission",
-                      sellingPrice: it.sellingPrice,
-                      sellingPriceCorrection: it.sellingPriceCorrection,
-                      commissionPercent: it.commissionPercent,
-                      commissionCorrection: it.commissionCorrection,
-                    }
-                  : { itemType: "bonus", bonusAmount: it.bonusAmount },
-              ),
-            ),
-            note: it.note || null,
-          })),
+          create: buildItemsCreate(v.items, { convertThbToUsd, rate }),
         },
       },
     });
