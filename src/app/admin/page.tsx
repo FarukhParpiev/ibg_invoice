@@ -26,13 +26,13 @@ export default async function AdminDashboardPage() {
     {
       title: "Инвойсов всего",
       value: invoicesCount,
-      href: "#",
+      href: "/admin/invoices",
       hint: "Включая draft/issued/paid/cancelled",
     },
     {
       title: "Черновики",
       value: draftCount,
-      href: "#",
+      href: "/admin/invoices?status=draft",
       hint: "Со статусом draft",
     },
   ];

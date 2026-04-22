@@ -5,13 +5,17 @@ import { CompanyEditForm } from "./CompanyEditForm";
 
 export default async function CompanyEditPage(props: PageProps<"/admin/companies/[id]">) {
   const { id } = await props.params;
+  const sp = await props.searchParams;
 
   const company = await prisma.company.findUnique({
     where: { id },
-    include: { bankAccounts: { orderBy: { currency: "asc" } } },
+    include: { bankAccounts: { orderBy: [{ currency: "asc" }, { isDefault: "desc" }] } },
   });
 
   if (!company) notFound();
+
+  const flashBankDeleted = sp.bankDeleted === "1";
+  const flashBankInUse = sp.bankInUse === "1";
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -41,33 +45,70 @@ export default async function CompanyEditPage(props: PageProps<"/admin/companies
         }}
       />
 
-      <section className="border rounded-lg p-5">
-        <h2 className="font-medium mb-3">Банковские счета</h2>
+      <section className="border rounded-lg p-5 space-y-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="font-medium">Банковские счета</h2>
+            <p className="text-xs text-zinc-500 mt-1">
+              Один счёт может быть «по умолчанию» на каждую валюту.
+            </p>
+          </div>
+          <Link
+            href={`/admin/companies/${company.id}/banks/new`}
+            className="text-sm bg-black text-white rounded px-3 py-1.5 hover:bg-zinc-800"
+          >
+            + Добавить
+          </Link>
+        </div>
+
+        {flashBankDeleted && (
+          <div className="text-sm rounded bg-zinc-100 px-3 py-2">
+            Счёт удалён.
+          </div>
+        )}
+        {flashBankInUse && (
+          <div className="text-sm rounded bg-red-50 text-red-700 px-3 py-2">
+            Счёт используется в одном или нескольких инвойсах и не может быть удалён.
+          </div>
+        )}
+
         {company.bankAccounts.length === 0 ? (
           <p className="text-sm text-zinc-500">Пока нет счетов.</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             {company.bankAccounts.map((b) => (
-              <li key={b.id} className="text-sm">
-                <div className="font-medium">
-                  {b.bankName} · {b.currency}
-                  {b.isDefault && (
-                    <span className="ml-2 text-xs text-green-700">
-                      по умолчанию
+              <li key={b.id}>
+                <Link
+                  href={`/admin/companies/${company.id}/banks/${b.id}`}
+                  className="block border rounded p-3 hover:border-zinc-400 transition"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="text-sm">
+                      <div className="font-medium">
+                        {b.bankName}{" "}
+                        <span className="text-zinc-500 font-normal">
+                          · {b.currency}
+                        </span>
+                        {b.isDefault && (
+                          <span className="ml-2 text-xs text-green-700">
+                            default
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-zinc-600 mt-0.5">
+                        {b.accountName} — {b.accountNumber}
+                        {b.swift && ` · SWIFT ${b.swift}`}
+                      </div>
+                    </div>
+                    <span className="text-xs text-zinc-400 whitespace-nowrap">
+                      Редактировать →
                     </span>
-                  )}
-                </div>
-                <div className="text-zinc-600">
-                  {b.accountName} — {b.accountNumber}
-                  {b.swift && ` · SWIFT ${b.swift}`}
-                </div>
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
         )}
-        <p className="text-xs text-zinc-400 mt-4">
-          Редактирование банковских счетов — в следующем этапе.
-        </p>
       </section>
     </div>
   );

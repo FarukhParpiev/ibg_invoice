@@ -236,7 +236,11 @@ model Invoice {
 
   // Сквозной номер по всей системе. Формат ДД/ММ/ГГГГ-NNNN
   // Для receipt: «NNNN-R» (суффикс -R к номеру родителя).
-  number String @unique
+  // NULL для draft — присваивается при переходе в issued.
+  number       String? @unique
+  // Монотонный глобальный счётчик, присваивается при issuance.
+  // Используется для генерации NNNN в number.
+  serialNumber Int?    @unique
 
   type             InvoiceType     @default(invoice)
   parentInvoiceId  String?         // для receipt — ссылка на оплаченный инвойс
