@@ -98,6 +98,7 @@ const invoiceSchema = z.object({
   otherDate: z.string().optional().or(z.literal("")),
 
   vatApplied: z.boolean(),
+  vatIncluded: z.boolean().optional().default(false),
   whtApplied: z.boolean(),
 
   notesText: z.string().max(10000).optional().or(z.literal("")),
@@ -226,6 +227,7 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
   const totals = calcTotals({
     items: itemsToTotalsInput(v.items),
     vatApplied: v.vatApplied,
+    vatIncluded: v.vatIncluded,
     whtApplied: v.whtApplied,
     exchangeRate: v.exchangeRate ?? null,
     showUsdEquivalent,
@@ -249,6 +251,7 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
       otherDate: parseDateOrNull(v.otherDate),
 
       vatApplied: v.vatApplied,
+      vatIncluded: v.vatIncluded,
       whtApplied: v.whtApplied,
 
       subtotal: toDecimal(totals.subtotal),
@@ -331,6 +334,7 @@ export async function updateDraftInvoice(
   const totals = calcTotals({
     items: itemsToTotalsInput(v.items),
     vatApplied: v.vatApplied,
+    vatIncluded: v.vatIncluded,
     whtApplied: v.whtApplied,
     exchangeRate: v.exchangeRate ?? null,
     showUsdEquivalent,
@@ -354,6 +358,7 @@ export async function updateDraftInvoice(
         otherDate: parseDateOrNull(v.otherDate),
 
         vatApplied: v.vatApplied,
+        vatIncluded: v.vatIncluded,
         whtApplied: v.whtApplied,
 
         subtotal: toDecimal(totals.subtotal),
@@ -513,6 +518,7 @@ export async function payInvoice(
             paidBy: session.user.id,
 
             vatApplied: inv.vatApplied,
+            vatIncluded: inv.vatIncluded,
             whtApplied: inv.whtApplied,
 
             subtotal: inv.subtotal,
@@ -683,6 +689,7 @@ export async function duplicateInvoice(id: string): Promise<Result> {
       otherDate: null,
 
       vatApplied: src.vatApplied,
+      vatIncluded: src.vatIncluded,
       whtApplied: src.whtApplied,
 
       subtotal: src.subtotal,

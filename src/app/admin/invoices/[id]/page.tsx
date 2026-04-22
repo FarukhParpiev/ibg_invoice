@@ -277,7 +277,10 @@ export default async function InvoiceDetailPage(
       <section className="border rounded-lg p-5 bg-zinc-50 max-w-md ml-auto text-sm tabular-nums">
         <Row label="Subtotal" value={`${fmt(invoice.subtotal)} ${invoice.primaryCurrency}`} />
         {invoice.vatApplied && (
-          <Row label="VAT 7%" value={`${fmt(invoice.vatAmount)} ${invoice.primaryCurrency}`} />
+          <Row
+            label={invoice.vatIncluded ? "VAT 7% (включён в сумму)" : "VAT 7%"}
+            value={`${fmt(invoice.vatAmount)} ${invoice.primaryCurrency}`}
+          />
         )}
         {invoice.whtApplied && (
           <Row

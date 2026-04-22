@@ -154,14 +154,23 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
     })
     .join("");
 
-  // USD-шаблон: справочные THB-суммы. Sum(line THB) = subtotalThb,
-  // ±VAT/WHT в тех же процентах поверх; total THB = subtotalThb + vat - wht.
+  // USD-шаблон: справочные THB-суммы. Sum(line THB) = subtotalThb.
+  // VAT-режим: сверху (+7%) или включён в сумму (извлекаем 7/107).
+  // WHT всегда от pre-VAT базы (net) — в обоих режимах 3% совпадает.
   const subtotalThb = isUsdTemplate
     ? invoice.items.reduce((s, it) => s + calcItemThbAmount(it), 0)
     : 0;
-  const vatThb = isUsdTemplate && invoice.vatApplied ? subtotalThb * 0.07 : 0;
-  const whtThb = isUsdTemplate && invoice.whtApplied ? subtotalThb * 0.03 : 0;
-  const totalThb = subtotalThb + vatThb - whtThb;
+  const vatIncluded = invoice.vatIncluded;
+  const vatThb = isUsdTemplate && invoice.vatApplied
+    ? vatIncluded
+      ? subtotalThb * (7 / 107)
+      : subtotalThb * 0.07
+    : 0;
+  const netThb = vatIncluded ? subtotalThb - vatThb : subtotalThb;
+  const whtThb = isUsdTemplate && invoice.whtApplied ? netThb * 0.03 : 0;
+  const totalThb = vatIncluded
+    ? subtotalThb - whtThb
+    : subtotalThb + vatThb - whtThb;
 
   const paymentSection = isCash
     ? `<div class="pay-block"><strong>${escapeHtml(L.cash)}</strong></div>`
@@ -310,7 +319,7 @@ ${
 <div class="totals">
   <div class="row"><span>${escapeHtml(L.subtotal)} (THB)</span><span class="v">${fmt(subtotalThb, lang)} THB</span></div>
   <div class="row"><span>${escapeHtml(L.subtotal)} (USD)</span><span class="v">${fmt(invoice.subtotal, lang)} USD</span></div>
-  ${invoice.vatApplied ? `<div class="row"><span>${escapeHtml(L.vat)} (USD)</span><span class="v">${fmt(invoice.vatAmount, lang)} USD</span></div>` : ""}
+  ${invoice.vatApplied ? `<div class="row"><span>${escapeHtml(L.vat)}${invoice.vatIncluded ? ` (${escapeHtml(L.vatIncluded)})` : ""} (USD)</span><span class="v">${fmt(invoice.vatAmount, lang)} USD</span></div>` : ""}
   ${invoice.whtApplied ? `<div class="row"><span>${escapeHtml(L.wht)} (USD)</span><span class="v">− ${fmt(invoice.whtAmount, lang)} USD</span></div>` : ""}
   <div class="row grand"><span>${escapeHtml(L.total)}</span><span class="v">${fmt(invoice.total, lang)} USD</span></div>
   <div class="usd-box">
@@ -333,7 +342,7 @@ ${
 
 <div class="totals">
   <div class="row"><span>${escapeHtml(L.subtotal)}</span><span class="v">${fmt(invoice.subtotal, lang)} ${escapeHtml(invoice.primaryCurrency)}</span></div>
-  ${invoice.vatApplied ? `<div class="row"><span>${escapeHtml(L.vat)}</span><span class="v">${fmt(invoice.vatAmount, lang)} ${escapeHtml(invoice.primaryCurrency)}</span></div>` : ""}
+  ${invoice.vatApplied ? `<div class="row"><span>${escapeHtml(L.vat)}${invoice.vatIncluded ? ` (${escapeHtml(L.vatIncluded)})` : ""}</span><span class="v">${fmt(invoice.vatAmount, lang)} ${escapeHtml(invoice.primaryCurrency)}</span></div>` : ""}
   ${invoice.whtApplied ? `<div class="row"><span>${escapeHtml(L.wht)}</span><span class="v">− ${fmt(invoice.whtAmount, lang)} ${escapeHtml(invoice.primaryCurrency)}</span></div>` : ""}
   <div class="row grand"><span>${escapeHtml(L.total)}</span><span class="v">${fmt(invoice.total, lang)} ${escapeHtml(invoice.primaryCurrency)}</span></div>
   ${

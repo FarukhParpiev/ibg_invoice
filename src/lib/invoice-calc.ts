@@ -40,6 +40,11 @@ export function calcItemAmountUsd(it: ItemInput, rate: number): number {
 export type TotalsInput = {
   items: ItemInput[];
   vatApplied: boolean;
+  // true  → VAT уже «сидит» внутри сумм позиций: вытаскиваем его как 7/107,
+  //         total = subtotal − wht (субтотал не меняется).
+  // false → VAT начисляется сверху: vat = subtotal × 0.07, total = subtotal + vat − wht.
+  // WHT всегда считается от pre-VAT базы (net), чтобы 3% совпадало в обоих режимах.
+  vatIncluded?: boolean;
   whtApplied: boolean;
   exchangeRate?: number | null;
   showUsdEquivalent?: boolean;
@@ -62,8 +67,38 @@ export type Totals = {
   totalThb: number | null;
 };
 
+// Возвращает {vatAmount, whtAmount, total} от субтотала в нужном режиме VAT.
+// Ключевое: WHT всегда от pre-VAT базы, чтобы сумма WHT совпадала
+// в «VAT сверху» и «VAT включён» режимах (тайская практика).
+function applyTaxes(
+  subtotal: number,
+  vatApplied: boolean,
+  vatIncluded: boolean,
+  whtApplied: boolean,
+): { vatAmount: number; whtAmount: number; total: number } {
+  if (!vatApplied) {
+    const wht = whtApplied ? round2(subtotal * 0.03) : 0;
+    return { vatAmount: 0, whtAmount: wht, total: round2(subtotal - wht) };
+  }
+
+  if (vatIncluded) {
+    // VAT уже в субтотале: извлекаем 7/107, WHT от net-базы (subtotal − vat).
+    const vat = round2(subtotal * (7 / 107));
+    const net = subtotal - vat;
+    const wht = whtApplied ? round2(net * 0.03) : 0;
+    // Total не добавляет VAT — он уже внутри субтотала; минусуем только WHT.
+    return { vatAmount: vat, whtAmount: wht, total: round2(subtotal - wht) };
+  }
+
+  // VAT сверху (дефолтный старый режим): субтотал = net.
+  const vat = round2(subtotal * 0.07);
+  const wht = whtApplied ? round2(subtotal * 0.03) : 0;
+  return { vatAmount: vat, whtAmount: wht, total: round2(subtotal + vat - wht) };
+}
+
 export function calcTotals(input: TotalsInput): Totals {
   const rate = input.exchangeRate ? Number(input.exchangeRate) : 0;
+  const vatIncluded = !!input.vatIncluded;
 
   if (input.convertThbToUsd) {
     // THB → USD. Без валидного курса считать нечего: возвращаем нули,
@@ -72,9 +107,12 @@ export function calcTotals(input: TotalsInput): Totals {
       (s, it) => s + calcItemAmount(it),
       0,
     );
-    const vatThb = input.vatApplied ? round2(subtotalThb * 0.07) : 0;
-    const whtThb = input.whtApplied ? round2(subtotalThb * 0.03) : 0;
-    const totalThb = round2(subtotalThb + vatThb - whtThb);
+    const thbTaxes = applyTaxes(
+      subtotalThb,
+      input.vatApplied,
+      vatIncluded,
+      input.whtApplied,
+    );
 
     if (rate <= 0) {
       return {
@@ -85,31 +123,37 @@ export function calcTotals(input: TotalsInput): Totals {
         subtotalUsd: null,
         totalUsd: null,
         subtotalThb: round2(subtotalThb),
-        totalThb,
+        totalThb: thbTaxes.total,
       };
     }
 
     const subtotalUsd = round2(subtotalThb / rate);
-    const vatAmountUsd = input.vatApplied ? round2(subtotalUsd * 0.07) : 0;
-    const whtAmountUsd = input.whtApplied ? round2(subtotalUsd * 0.03) : 0;
-    const totalUsd = round2(subtotalUsd + vatAmountUsd - whtAmountUsd);
+    const usdTaxes = applyTaxes(
+      subtotalUsd,
+      input.vatApplied,
+      vatIncluded,
+      input.whtApplied,
+    );
 
     return {
       subtotal: subtotalUsd,
-      vatAmount: vatAmountUsd,
-      whtAmount: whtAmountUsd,
-      total: totalUsd,
+      vatAmount: usdTaxes.vatAmount,
+      whtAmount: usdTaxes.whtAmount,
+      total: usdTaxes.total,
       subtotalUsd: null,
       totalUsd: null,
       subtotalThb: round2(subtotalThb),
-      totalThb,
+      totalThb: thbTaxes.total,
     };
   }
 
   const subtotal = input.items.reduce((s, it) => s + calcItemAmount(it), 0);
-  const vatAmount = input.vatApplied ? round2(subtotal * 0.07) : 0;
-  const whtAmount = input.whtApplied ? round2(subtotal * 0.03) : 0;
-  const total = round2(subtotal + vatAmount - whtAmount);
+  const { vatAmount, whtAmount, total } = applyTaxes(
+    subtotal,
+    input.vatApplied,
+    vatIncluded,
+    input.whtApplied,
+  );
 
   let subtotalUsd: number | null = null;
   let totalUsd: number | null = null;

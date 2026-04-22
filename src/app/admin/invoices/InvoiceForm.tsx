@@ -54,6 +54,7 @@ const emptyDefaults: InvoiceFormValues = {
   dueDate: "",
   otherDate: "",
   vatApplied: false,
+  vatIncluded: false,
   whtApplied: false,
   notesText: "",
   items: [
@@ -94,6 +95,7 @@ export function InvoiceForm({
   // Live-значения для пересчёта итогов
   const watchedItems = useWatch({ control, name: "items" });
   const vatApplied = useWatch({ control, name: "vatApplied" });
+  const vatIncluded = useWatch({ control, name: "vatIncluded" });
   const whtApplied = useWatch({ control, name: "whtApplied" });
   const exchangeRate = useWatch({ control, name: "exchangeRate" });
   const showUsdEquivalent = useWatch({ control, name: "showUsdEquivalent" });
@@ -119,6 +121,7 @@ export function InvoiceForm({
           : { itemType: "bonus", bonusAmount: Number(it.bonusAmount) || 0 },
       ),
       vatApplied: !!vatApplied,
+      vatIncluded: !!vatIncluded,
       whtApplied: !!whtApplied,
       exchangeRate: exchangeRate ? Number(exchangeRate) : null,
       showUsdEquivalent: !!showUsdEquivalent,
@@ -127,6 +130,7 @@ export function InvoiceForm({
   }, [
     watchedItems,
     vatApplied,
+    vatIncluded,
     whtApplied,
     exchangeRate,
     showUsdEquivalent,
@@ -328,10 +332,18 @@ export function InvoiceForm({
             </div>
           )}
 
-          <label className="flex items-center gap-2 text-sm col-span-1">
-            <input type="checkbox" {...register("vatApplied")} />
-            <span>VAT 7%</span>
-          </label>
+          <div className="col-span-1 space-y-1">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" {...register("vatApplied")} />
+              <span>VAT 7%</span>
+            </label>
+            {vatApplied && (
+              <label className="flex items-center gap-2 text-xs text-zinc-600 ml-5">
+                <input type="checkbox" {...register("vatIncluded")} />
+                <span>VAT уже включён в сумму комиссии</span>
+              </label>
+            )}
+          </div>
           <label className="flex items-center gap-2 text-sm col-span-1">
             <input type="checkbox" {...register("whtApplied")} />
             <span>WHT 3% (вычитается)</span>
@@ -535,7 +547,7 @@ export function InvoiceForm({
         />
         {vatApplied && (
           <Row
-            label="VAT 7%"
+            label={vatIncluded ? "VAT 7% (включён в сумму)" : "VAT 7%"}
             value={totals.vatAmount}
             currency={primaryCurrency}
           />

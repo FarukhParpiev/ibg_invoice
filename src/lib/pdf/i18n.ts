@@ -21,6 +21,7 @@ type Dict = {
   sellingPrice: string;
   subtotal: string;
   vat: string;
+  vatIncluded: string; // суффикс к VAT, если налог уже в сумме позиций
   wht: string;
   total: string;
   totalUsdEquivalent: string;
@@ -67,6 +68,7 @@ const dicts: Record<PdfLang, Dict> = {
     sellingPrice: "Selling price",
     subtotal: "Subtotal",
     vat: "VAT 7%",
+    vatIncluded: "included",
     wht: "Withholding tax 3%",
     total: "Total",
     totalUsdEquivalent: "Total (USD equivalent)",
@@ -111,6 +113,7 @@ const dicts: Record<PdfLang, Dict> = {
     sellingPrice: "ราคาขาย",
     subtotal: "รวม",
     vat: "ภาษีมูลค่าเพิ่ม 7%",
+    vatIncluded: "รวมในยอดแล้ว",
     wht: "หัก ณ ที่จ่าย 3%",
     total: "ยอดรวมทั้งสิ้น",
     totalUsdEquivalent: "ยอดรวม (เทียบ USD)",
@@ -155,6 +158,7 @@ const dicts: Record<PdfLang, Dict> = {
     sellingPrice: "Цена продажи",
     subtotal: "Итого",
     vat: "НДС 7%",
+    vatIncluded: "включён в сумму",
     wht: "Удерживаемый налог 3%",
     total: "К оплате",
     totalUsdEquivalent: "Итого (эквивалент в USD)",

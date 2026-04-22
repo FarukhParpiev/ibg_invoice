@@ -286,8 +286,9 @@ model Invoice {
   counterparty      Counterparty @relation(fields: [counterpartyId], references: [id])
 
   // Налоги
-  vatApplied Boolean @default(false) // 7%
-  whtApplied Boolean @default(false) // 3% withholding
+  vatApplied  Boolean @default(false) // 7%
+  vatIncluded Boolean @default(false) // true: VAT уже в сумме позиции (извлекаем 7/107); false: сверху (+7%)
+  whtApplied  Boolean @default(false) // 3% withholding (на pre-VAT базу)
 
   // Суммы (в primary currency)
   subtotal   Decimal @db.Decimal(18, 2) @default(0)

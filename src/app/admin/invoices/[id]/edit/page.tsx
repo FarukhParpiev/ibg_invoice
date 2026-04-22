@@ -67,6 +67,7 @@ export default async function EditInvoicePage(
       ? invoice.otherDate.toISOString().slice(0, 10)
       : "",
     vatApplied: invoice.vatApplied,
+    vatIncluded: invoice.vatIncluded,
     whtApplied: invoice.whtApplied,
     notesText: invoice.notesText ?? "",
     items: invoice.items.map((it) =>
