@@ -44,8 +44,12 @@ export function PdfActions({
 
   const handleCopy = async () => {
     if (!pdfUrl) return;
+    // Копируем auth-gated URL нашего приложения, а не raw Vercel Blob.
+    // Приватный blob-store отдаёт Forbidden без авторизации, а наш endpoint
+    // проверяет сессию и стримит файл.
+    const downloadUrl = `${window.location.origin}/api/invoices/${invoiceId}/pdf/download`;
     try {
-      await navigator.clipboard.writeText(pdfUrl);
+      await navigator.clipboard.writeText(downloadUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {

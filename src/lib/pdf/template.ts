@@ -6,6 +6,8 @@
 //
 // Язык берётся из counterparty.preferredLanguage.
 
+import fs from "node:fs";
+import path from "node:path";
 import type {
   BankAccount,
   Company,
@@ -15,6 +17,33 @@ import type {
   PaymentTerms,
 } from "@prisma/client";
 import { t, type PdfLang } from "./i18n";
+
+// Универсальный логотип IBG — одинаковый для всех 9 компаний.
+// Встраиваем как data-URI, потому что page.setContent() в Puppeteer не имеет
+// baseURL, и относительные пути не резолвятся.
+let cachedLogoDataUri: string | null | undefined;
+function loadUniversalLogoDataUri(): string | null {
+  if (cachedLogoDataUri !== undefined) return cachedLogoDataUri;
+  const candidates: Array<{ file: string; mime: string }> = [
+    { file: "ibg.svg", mime: "image/svg+xml" },
+    { file: "ibg.png", mime: "image/png" },
+    { file: "ibg.jpg", mime: "image/jpeg" },
+    { file: "ibg.jpeg", mime: "image/jpeg" },
+    { file: "ibg.webp", mime: "image/webp" },
+  ];
+  for (const c of candidates) {
+    const p = path.join(process.cwd(), "public", "logos", c.file);
+    try {
+      const buf = fs.readFileSync(p);
+      cachedLogoDataUri = `data:${c.mime};base64,${buf.toString("base64")}`;
+      return cachedLogoDataUri;
+    } catch {
+      // файла нет — пробуем следующий формат
+    }
+  }
+  cachedLogoDataUri = null;
+  return null;
+}
 
 export type InvoicePdfData = Invoice & {
   items: InvoiceItem[];
@@ -172,7 +201,11 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
     ? subtotalThb - whtThb
     : subtotalThb + vatThb - whtThb;
 
-  const paymentSection = isCash
+  // На receipt платёжные реквизиты не нужны — деньги уже получены,
+   // а блок съедает пол-страницы и выталкивает receipt на вторую A4.
+  const paymentSection = isReceipt
+    ? ""
+    : isCash
     ? `<div class="pay-block"><strong>${escapeHtml(L.cash)}</strong></div>`
     : isCrypto
       ? `<div class="pay-block">
@@ -210,9 +243,10 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
             }
          </div>`;
 
-  const logoBlock = invoice.ourCompany.logoUrl
-    ? `<img src="${escapeHtml(invoice.ourCompany.logoUrl)}" alt="logo" class="logo"/>`
-    : `<div class="logo-placeholder">${escapeHtml(invoice.ourCompany.name)}</div>`;
+  const universalLogo = loadUniversalLogoDataUri();
+  const logoBlock = universalLogo
+    ? `<img src="${universalLogo}" alt="logo" class="logo"/>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -220,43 +254,42 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
 <meta charset="utf-8"/>
 <title>${escapeHtml(title)} ${escapeHtml(number)}</title>
 <style>
-  @page { size: A4; margin: 16mm 14mm; }
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
-  html, body { margin:0; padding:0; font-family: ${lang === "th" ? "'Sarabun', 'Noto Sans Thai', sans-serif" : "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"}; font-size: 10pt; color: #111; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid ${titleColor}; padding-bottom: 10px; margin-bottom: 18px; }
-  .header .title { font-size: 22pt; font-weight: 700; letter-spacing: 2px; color: ${titleColor}; }
-  .header .meta { text-align: right; font-size: 10pt; }
-  .header .meta .num { font-size: 13pt; font-weight: 600; margin-top: 4px; font-family: 'Courier New', monospace; }
-  .logo { max-height: 48px; max-width: 180px; }
-  .logo-placeholder { font-size: 14pt; font-weight: 600; border: 1px dashed #aaa; padding: 6px 12px; color: #777; }
-  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 20px; }
-  .party h3 { margin: 0 0 4px 0; font-size: 9pt; text-transform: uppercase; color: #666; letter-spacing: 0.6px; font-weight: 500; }
-  .party .name { font-weight: 600; font-size: 11pt; margin-bottom: 4px; }
-  .party .info { color: #333; white-space: pre-line; line-height: 1.5; }
+  html, body { margin:0; padding:0; font-family: ${lang === "th" ? "'Sarabun', 'Noto Sans Thai', sans-serif" : "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"}; font-size: 9pt; color: #111; line-height: 1.35; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid ${titleColor}; padding-bottom: 6px; margin-bottom: 10px; }
+  .header .title { font-size: 18pt; font-weight: 700; letter-spacing: 2px; color: ${titleColor}; }
+  .header .meta { text-align: right; font-size: 9pt; }
+  .header .meta .num { font-size: 11pt; font-weight: 600; margin-top: 2px; font-family: 'Courier New', monospace; }
+  .logo { max-height: 46px; max-width: 200px; object-fit: contain; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 10px; }
+  .party h3 { margin: 0 0 2px 0; font-size: 8pt; text-transform: uppercase; color: #666; letter-spacing: 0.6px; font-weight: 500; }
+  .party .name { font-weight: 600; font-size: 10pt; margin-bottom: 2px; }
+  .party .info { color: #333; white-space: pre-line; line-height: 1.3; }
   .party .info .row { color: #555; }
-  .cancel-banner { background: #fee; color: #a11; border: 1px solid #faa; padding: 10px 14px; margin-bottom: 16px; font-weight: 600; text-align: center; }
-  .paid-banner { background: #ecfdf5; color: #047857; border: 1px solid #86efac; padding: 8px 14px; margin-bottom: 16px; font-weight: 600; }
-  table.items { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-  table.items thead th { background: #f5f5f5; border-bottom: 1px solid #ccc; font-weight: 600; padding: 7px 8px; text-align: left; font-size: 9pt; text-transform: uppercase; color: #444; }
-  table.items tbody td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: top; }
-  table.items .col-no { width: 28px; color: #888; }
-  table.items .col-amount { width: 110px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .type-badge { display: inline-block; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; padding: 1px 6px; border-radius: 3px; margin-bottom: 2px; }
+  .cancel-banner { background: #fee; color: #a11; border: 1px solid #faa; padding: 6px 12px; margin-bottom: 8px; font-weight: 600; text-align: center; }
+  .paid-banner { background: #ecfdf5; color: #047857; border: 1px solid #86efac; padding: 5px 10px; margin-bottom: 8px; font-weight: 600; }
+  table.items { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  table.items thead th { background: #f5f5f5; border-bottom: 1px solid #ccc; font-weight: 600; padding: 5px 6px; text-align: left; font-size: 8pt; text-transform: uppercase; color: #444; }
+  table.items tbody td { padding: 4px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+  table.items .col-no { width: 22px; color: #888; }
+  table.items .col-amount { width: 100px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .type-badge { display: inline-block; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 5px; border-radius: 3px; margin-bottom: 1px; }
   .type-commission { background: #eef3ff; color: #1e40af; }
   .type-bonus { background: #f5edff; color: #6d28d9; }
-  .muted { color: #777; font-size: 9pt; }
-  .totals { margin-left: auto; width: 300px; margin-bottom: 22px; }
-  .totals .row { display: flex; justify-content: space-between; padding: 3px 0; }
-  .totals .row.grand { border-top: 1px solid #999; margin-top: 6px; padding-top: 8px; font-weight: 700; font-size: 12pt; }
+  .muted { color: #777; font-size: 8.5pt; }
+  .totals { margin-left: auto; width: 280px; margin-bottom: 10px; }
+  .totals .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .totals .row.grand { border-top: 1px solid #999; margin-top: 4px; padding-top: 5px; font-weight: 700; font-size: 11pt; }
   .totals .row .v { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .totals .usd-box { border-top: 1px dashed #aaa; margin-top: 10px; padding-top: 8px; color: #555; font-size: 9pt; }
-  .pay-block { border: 1px solid #ddd; padding: 12px 14px; border-radius: 4px; margin-bottom: 18px; background: #fafafa; }
-  .pay-title { font-size: 9pt; text-transform: uppercase; color: #666; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
-  .pay-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-  .pay-table td { padding: 2px 0; vertical-align: top; }
-  .pay-table td:first-child { width: 140px; color: #666; }
-  .notes { border-top: 1px dashed #ccc; padding-top: 10px; font-size: 9pt; color: #444; white-space: pre-line; }
-  .footer { margin-top: 30px; border-top: 1px solid #eee; padding-top: 8px; font-size: 8pt; color: #888; text-align: center; }
+  .totals .usd-box { border-top: 1px dashed #aaa; margin-top: 5px; padding-top: 4px; color: #555; font-size: 8.5pt; }
+  .pay-block { border: 1px solid #ddd; padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; background: #fafafa; }
+  .pay-title { font-size: 8pt; text-transform: uppercase; color: #666; letter-spacing: 0.5px; margin-bottom: 3px; font-weight: 600; }
+  .pay-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .pay-table td { padding: 1px 0; vertical-align: top; }
+  .pay-table td:first-child { width: 130px; color: #666; }
+  .notes { border-top: 1px dashed #ccc; padding-top: 5px; font-size: 8.5pt; color: #444; white-space: pre-line; }
+  .footer { margin-top: 12px; border-top: 1px solid #eee; padding-top: 4px; font-size: 7.5pt; color: #888; text-align: center; }
 </style>
 </head>
 <body>
