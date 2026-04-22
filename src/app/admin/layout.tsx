@@ -5,6 +5,7 @@ import { requireSuperAdmin } from "@/lib/auth-helpers";
 const navItems = [
   { href: "/admin", label: "Дашборд" },
   { href: "/admin/invoices", label: "Инвойсы" },
+  { href: "/admin/receipts", label: "Receipts" },
   { href: "/admin/companies", label: "Наши компании" },
   { href: "/admin/counterparties", label: "Контрагенты" },
 ];
