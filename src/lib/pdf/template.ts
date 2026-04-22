@@ -262,7 +262,10 @@ export function renderInvoiceHtml(invoice: InvoicePdfData): string {
 <meta charset="utf-8"/>
 <title>${escapeHtml(title)} ${escapeHtml(number)}</title>
 <style>
-  @page { size: A4; margin: 0; }
+  /* Поля задаём через page.pdf({margin}) в generate.ts (15 мм).
+     Здесь фиксируем только размер — если указать margin:0, CSS @page
+     перебьёт puppeteer-опцию и всё упрётся в край листа. */
+  @page { size: A4; }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; font-family: ${lang === "th" ? "'Sarabun', 'Noto Sans Thai', sans-serif" : "-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"}; font-size: 9pt; color: #111; line-height: 1.35; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid ${titleColor}; padding-bottom: 6px; margin-bottom: 10px; }
