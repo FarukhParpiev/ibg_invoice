@@ -1,0 +1,410 @@
+// Invoice App — Prisma schema
+// Соответствует §5.1 документа docs/ТЗ_Invoice_App.md
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Пользователи и авторизация
+// ─────────────────────────────────────────────────────────────
+
+enum UserRole {
+  super_admin
+  user
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(user)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Auth.js relations
+  accounts Account[]
+  sessions Session[]
+
+  // Business relations
+  createdInvoices   Invoice[]  @relation("CreatedBy")
+  issuedInvoices    Invoice[]  @relation("IssuedBy")
+  paidInvoices      Invoice[]  @relation("PaidBy")
+  cancelledInvoices Invoice[]  @relation("CancelledBy")
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+// Auth.js: OAuth провайдеры
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// Auth.js: активные сессии
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Auth.js: магик-ссылки
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Наши компании
+// ─────────────────────────────────────────────────────────────
+
+enum LegalType {
+  resident  // Таиланд, платим тайские налоги
+  offshore  // UK, UAE и прочие
+}
+
+enum Currency {
+  THB
+  USD
+  EUR
+  RUB
+}
+
+model Company {
+  id              String    @id @default(cuid())
+  name            String
+  legalType       LegalType
+  address         String?   @db.Text
+  taxId           String?
+  registrationNo  String?
+  phone           String?
+  email           String?
+  logoUrl         String?
+  defaultCurrency Currency  @default(THB)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  bankAccounts BankAccount[]
+  invoices     Invoice[]
+
+  @@index([isActive])
+  @@map("companies")
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  companyId     String
+  bankName      String
+  accountName   String
+  accountNumber String
+  swift         String?
+  branch        String?
+  bankAddress   String?  @db.Text
+  currency      Currency
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@index([companyId])
+  @@map("bank_accounts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Контрагенты
+// ─────────────────────────────────────────────────────────────
+
+enum PreferredLanguage {
+  en
+  th
+  ru
+}
+
+model Counterparty {
+  id                String            @id @default(cuid())
+  name              String
+  address           String?           @db.Text
+  taxId             String?
+  phone             String?
+  email             String?
+  preferredLanguage PreferredLanguage @default(en)
+  notes             String?           @db.Text
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  invoices Invoice[]
+
+  // Индекс для type-ahead поиска по имени (включая тайский)
+  // Полнотекстовый pg_trgm индекс добавим через миграцию отдельно
+  @@index([isActive])
+  @@index([name])
+  @@map("counterparties")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Справочники
+// ─────────────────────────────────────────────────────────────
+
+model PaymentTerms {
+  id        String    @id @default(cuid())
+  code      String    @unique // BANK_TRANSFER, SWIFT_TRANSFER, CRYPTO_TRANSFER
+  label     String
+  isActive  Boolean   @default(true)
+  invoices  Invoice[]
+
+  @@map("payment_terms")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Инвойсы и receipt'ы
+// ─────────────────────────────────────────────────────────────
+
+enum InvoiceType {
+  invoice
+  receipt
+}
+
+enum InvoiceTemplate {
+  ibg_thb         // Info IBG / Invoice IBG
+  ib_group_thb    // Info IB Group / Invoice IB Group
+  ib_group_usd    // Info USD / Invoice USD
+  wise_thb        // Info Wise THB / Invoice Wise THB
+  crypto          // Info crypto / Invoice crypto
+  ibg_kas         // BLANK IBG Kas (cash variant)
+  others_thai     // Info others Thai
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  paid
+  cancelled
+}
+
+enum ExchangeRateSource {
+  wise
+  manual
+}
+
+enum ItemType {
+  commission
+  bonus
+}
+
+model Invoice {
+  id   String @id @default(cuid())
+
+  // Сквозной номер по всей системе. Формат ДД/ММ/ГГГГ-NNNN
+  // Для receipt: «NNNN-R» (суффикс -R к номеру родителя).
+  number String @unique
+
+  type             InvoiceType     @default(invoice)
+  parentInvoiceId  String?         // для receipt — ссылка на оплаченный инвойс
+  parentInvoice    Invoice?        @relation("InvoiceReceipt", fields: [parentInvoiceId], references: [id])
+  receipts         Invoice[]       @relation("InvoiceReceipt")
+
+  template InvoiceTemplate
+  status   InvoiceStatus   @default(draft)
+
+  primaryCurrency     Currency @default(THB)
+  showUsdEquivalent   Boolean  @default(false)
+
+  // Курс фиксируется при issuance и не меняется
+  exchangeRate       Decimal?            @db.Decimal(18, 6)
+  exchangeRateSource ExchangeRateSource?
+  exchangeRateAt     DateTime?
+
+  issueDate DateTime
+  dueDate   DateTime?
+  otherDate DateTime?
+
+  // Оплата
+  paidAt DateTime?
+  paidBy String?
+  paidByUser User? @relation("PaidBy", fields: [paidBy], references: [id])
+
+  // Отмена
+  cancelledAt      DateTime?
+  cancelledBy      String?
+  cancelledReason  String?   @db.Text
+
+  // Реквизиты
+  paymentTermsId    String?
+  paymentTerms      PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
+
+  ourCompanyId      String
+  ourCompany        Company @relation(fields: [ourCompanyId], references: [id])
+
+  ourBankAccountId  String
+  ourBankAccount    BankAccount @relation(fields: [ourBankAccountId], references: [id])
+
+  counterpartyId    String
+  counterparty      Counterparty @relation(fields: [counterpartyId], references: [id])
+
+  // Налоги
+  vatApplied Boolean @default(false) // 7%
+  whtApplied Boolean @default(false) // 3% withholding
+
+  // Суммы (в primary currency)
+  subtotal   Decimal @db.Decimal(18, 2) @default(0)
+  vatAmount  Decimal @db.Decimal(18, 2) @default(0)
+  whtAmount  Decimal @db.Decimal(18, 2) @default(0)
+  total      Decimal @db.Decimal(18, 2) @default(0)
+
+  // Эквивалент в USD (если showUsdEquivalent = true)
+  subtotalUsd Decimal? @db.Decimal(18, 2)
+  totalUsd    Decimal? @db.Decimal(18, 2)
+
+  notesText String? @db.Text
+
+  // PDF
+  pdfUrl       String?
+  pdfVersions  Json?   // [{url, generatedAt, by}]
+
+  // Аудит
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+  issuedById  String?
+  issuedBy    User?  @relation("IssuedBy", fields: [issuedById], references: [id])
+  cancelledByUser User? @relation("CancelledBy", fields: [cancelledBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items InvoiceItem[]
+
+  // Receipt обязан ссылаться на инвойс (контроль через триггер в миграции)
+
+  @@index([status, issueDate])
+  @@index([counterpartyId])
+  @@index([ourCompanyId, issueDate])
+  @@index([parentInvoiceId])
+  @@index([type, status])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id         String @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  positionNo Int
+  itemType   ItemType
+
+  // Свободный ввод (MVP). Позже — ссылки на справочник projects/units.
+  projectName String?
+  unitCode    String?
+
+  // Commission = (sellingPrice + sellingPriceCorrection) * commissionPercent + commissionCorrection
+  sellingPrice            Decimal? @db.Decimal(18, 2)
+  commissionPercent       Decimal? @db.Decimal(6, 3) // 1.000 = 1%
+  sellingPriceCorrection  Decimal? @db.Decimal(18, 2)
+  commissionCorrection    Decimal? @db.Decimal(18, 2)
+
+  // Bonus = bonusAmount (в отдельной позиции)
+  bonusAmount Decimal? @db.Decimal(18, 2)
+
+  amount Decimal @db.Decimal(18, 2) @default(0) // итог по строке
+
+  note   String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@unique([invoiceId, positionNo])
+  @@map("invoice_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Audit Log
+// ─────────────────────────────────────────────────────────────
+
+enum AuditAction {
+  create
+  update
+  issue
+  pay
+  cancel
+  delete
+  login
+  logout
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+
+  entity    String      // invoice, company, counterparty, user, ...
+  entityId  String?
+
+  action    AuditAction
+  diff      Json?       // { before: {...}, after: {...} }
+
+  ip        String?
+  userAgent String?   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Курсы валют (кеш из Wise API)
+// ─────────────────────────────────────────────────────────────
+
+model ExchangeRateCache {
+  id       String   @id @default(cuid())
+  fromCurrency Currency
+  toCurrency   Currency
+  rate     Decimal  @db.Decimal(18, 6)
+  source   ExchangeRateSource @default(wise)
+  fetchedAt DateTime @default(now())
+
+  @@index([fromCurrency, toCurrency, fetchedAt])
+  @@map("exchange_rate_cache")
+}
