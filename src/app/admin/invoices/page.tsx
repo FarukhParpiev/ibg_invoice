@@ -20,10 +20,42 @@ export default async function InvoicesListPage(
       : null;
   const typeFilter: InvoiceType | null =
     sp.type === "receipt" ? "receipt" : sp.type === "invoice" ? "invoice" : null;
+  const q = typeof sp.q === "string" ? sp.q.trim() : "";
 
   const where = {
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(typeFilter ? { type: typeFilter } : { type: "invoice" as const }),
+    ...(q
+      ? {
+          OR: [
+            { number: { contains: q, mode: "insensitive" as const } },
+            {
+              counterparty: {
+                name: { contains: q, mode: "insensitive" as const },
+              },
+            },
+            {
+              ourCompany: {
+                name: { contains: q, mode: "insensitive" as const },
+              },
+            },
+            {
+              items: {
+                some: {
+                  projectName: { contains: q, mode: "insensitive" as const },
+                },
+              },
+            },
+            {
+              items: {
+                some: {
+                  unitCode: { contains: q, mode: "insensitive" as const },
+                },
+              },
+            },
+          ],
+        }
+      : {}),
   };
 
   const [invoices, counts] = await Promise.all([
@@ -101,6 +133,42 @@ export default async function InvoicesListPage(
         />
       </div>
 
+      <form className="flex gap-2" action="/admin/invoices">
+        {/* Preserve active status/type filter when submitting a new search so
+            the user stays in the same view (e.g. searching within drafts). */}
+        {statusFilter && (
+          <input type="hidden" name="status" value={statusFilter} />
+        )}
+        {typeFilter && <input type="hidden" name="type" value={typeFilter} />}
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Search by number, company, counterparty, project or unit…"
+          className="border rounded px-3 py-2 text-sm w-96"
+        />
+        <button
+          type="submit"
+          className="border rounded px-4 py-2 text-sm hover:bg-zinc-50"
+        >
+          Search
+        </button>
+        {q && (
+          <Link
+            href={
+              statusFilter
+                ? `/admin/invoices?status=${statusFilter}`
+                : typeFilter
+                  ? `/admin/invoices?type=${typeFilter}`
+                  : "/admin/invoices"
+            }
+            className="text-sm text-zinc-500 hover:text-zinc-900 py-2"
+          >
+            Reset
+          </Link>
+        )}
+      </form>
+
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-600">
@@ -118,7 +186,7 @@ export default async function InvoicesListPage(
             {invoices.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-zinc-500">
-                  No invoices.
+                  {q ? "Nothing found." : "No invoices."}
                 </td>
               </tr>
             ) : (
