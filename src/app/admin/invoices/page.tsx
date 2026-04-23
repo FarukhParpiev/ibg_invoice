@@ -35,6 +35,13 @@ export default async function InvoicesListPage(
         ourCompany: { select: { name: true } },
         counterparty: { select: { name: true } },
         receipts: { select: { id: true, number: true } },
+        // First line item gives us the "{project} {unit}" title shown in
+        // the Title column and used as the PDF filename.
+        items: {
+          orderBy: { positionNo: "asc" },
+          take: 1,
+          select: { projectName: true, unitCode: true },
+        },
       },
     }),
     prisma.invoice.groupBy({
@@ -100,6 +107,7 @@ export default async function InvoicesListPage(
             <tr>
               <th className="text-left px-4 py-3 font-medium">No.</th>
               <th className="text-left px-4 py-3 font-medium">Date</th>
+              <th className="text-left px-4 py-3 font-medium">Title</th>
               <th className="text-left px-4 py-3 font-medium">Company</th>
               <th className="text-left px-4 py-3 font-medium">Counterparty</th>
               <th className="text-right px-4 py-3 font-medium">Amount</th>
@@ -109,12 +117,20 @@ export default async function InvoicesListPage(
           <tbody>
             {invoices.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-zinc-500">
+                <td colSpan={7} className="px-4 py-10 text-center text-zinc-500">
                   No invoices.
                 </td>
               </tr>
             ) : (
-              invoices.map((inv) => (
+              invoices.map((inv) => {
+                // "{project} {unit}" — same string used as the PDF filename.
+                // Empty string fine; the cell falls back to a dash.
+                const first = inv.items[0];
+                const title = [first?.projectName, first?.unitCode]
+                  .map((s) => s?.trim())
+                  .filter((s): s is string => !!s)
+                  .join(" ");
+                return (
                 <tr key={inv.id} className="border-t hover:bg-zinc-50/50">
                   <td className="px-4 py-3 font-mono text-xs">
                     <Link
@@ -141,6 +157,9 @@ export default async function InvoicesListPage(
                   <td className="px-4 py-3 text-zinc-600">
                     {inv.issueDate.toISOString().slice(0, 10)}
                   </td>
+                  <td className="px-4 py-3 text-zinc-700 max-w-xs truncate" title={title}>
+                    {title || <span className="text-zinc-400">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-zinc-700">
                     {inv.ourCompany.name}
                   </td>
@@ -164,7 +183,8 @@ export default async function InvoicesListPage(
                     </span>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

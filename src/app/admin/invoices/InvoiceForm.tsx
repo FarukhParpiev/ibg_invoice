@@ -35,11 +35,89 @@ const templateOptions: { value: InvoiceFormValues["template"]; label: string }[]
   { value: "ibg_thb", label: "IBG THB (residents)" },
   { value: "ib_group_thb", label: "IB Group THB" },
   { value: "ib_group_usd", label: "IB Group USD" },
-  { value: "wise_thb", label: "Wise THB" },
-  { value: "crypto", label: "Crypto" },
+  { value: "wise_thb", label: "Wise USD" },
+  { value: "crypto", label: "Crypto (BEP20)" },
   { value: "ibg_kas", label: "IBG Kas (cash)" },
   { value: "others_thai", label: "Others Thai" },
+  { value: "blank", label: "Blank (manual)" },
 ];
+
+// When the user picks a template, we auto-select our company, bank and invoice
+// currency. Substring matching against company.name + bank.bankName means the
+// preset survives small name tweaks in /admin/companies (e.g. renaming an
+// account). Returns null for manual templates (others_thai, blank) and when
+// no company/bank matches — the caller then leaves those fields alone.
+type TemplatePreset = {
+  companyId: string;
+  bankId: string;
+  currency: "THB" | "USD" | "EUR" | "RUB";
+};
+
+type TemplatePresetRule = {
+  company?: RegExp;
+  bank?: RegExp;
+  currency?: "THB" | "USD" | "EUR" | "RUB";
+};
+
+const TEMPLATE_PRESET_RULES: Record<
+  InvoiceFormValues["template"],
+  TemplatePresetRule
+> = {
+  ibg_thb: {
+    company: /IBG Property.*Head Office/i,
+    bank: /(Siam Commercial|SCB)/i,
+    currency: "THB",
+  },
+  ib_group_thb: {
+    company: /IB GROUP INCORPORATED/i,
+    bank: /Citibank/i,
+    currency: "THB",
+  },
+  ib_group_usd: {
+    company: /IB GROUP INCORPORATED/i,
+    bank: /Citibank/i,
+    currency: "USD",
+  },
+  wise_thb: {
+    company: /IB Global Partners/i,
+    bank: /Wise/i,
+    currency: "USD",
+  },
+  crypto: {
+    company: /IBG Property.*Head Office/i,
+    bank: /Binance/i,
+    currency: "USD",
+  },
+  ibg_kas: {
+    company: /IBG Property.*Head Office/i,
+    bank: /Kasikorn/i,
+    currency: "THB",
+  },
+  others_thai: {},
+  blank: {},
+};
+
+function findTemplatePreset(
+  template: InvoiceFormValues["template"],
+  companies: InvoiceFormCompany[],
+): TemplatePreset | null {
+  const rule = TEMPLATE_PRESET_RULES[template];
+  if (!rule.company) return null;
+  const company = companies.find((c) => rule.company!.test(c.name));
+  if (!company) return null;
+  // Prefer a bank whose name matches the template; fall back to the default
+  // bank so the form stays valid even if the target bank hasn't been added yet.
+  const bank =
+    (rule.bank && company.bankAccounts.find((b) => rule.bank!.test(b.bankName))) ||
+    company.bankAccounts.find((b) => b.isDefault) ||
+    company.bankAccounts[0];
+  if (!bank) return null;
+  return {
+    companyId: company.id,
+    bankId: bank.id,
+    currency: rule.currency ?? company.defaultCurrency,
+  };
+}
 
 // Due date = issue date + this many days by default. Hardcoded, no per-terms
 // override — users almost always use the same +5 window, and when they don't
@@ -104,7 +182,8 @@ export function InvoiceForm({
   const form = useForm<InvoiceFormValues>({
     defaultValues: defaults ?? emptyDefaults,
   });
-  const { register, control, handleSubmit, formState, setValue, reset } = form;
+  const { register, control, handleSubmit, formState, setValue, getValues, reset } =
+    form;
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
   // Live values used to recompute totals
@@ -212,12 +291,39 @@ export function InvoiceForm({
               className="input"
               {...register("template", {
                 onChange: (e) => {
-                  if (e.target.value === "ib_group_usd") {
-                    // For the USD template, primary is always USD; show-equivalent is not used
-                    setValue("primaryCurrency", "USD", { shouldDirty: true });
-                    setValue("showUsdEquivalent", false, {
+                  const tpl = e.target
+                    .value as InvoiceFormValues["template"];
+                  const preset = findTemplatePreset(tpl, ctx.companies);
+                  if (preset) {
+                    // Auto-fill company + bank + currency so the user doesn't
+                    // have to pick them again for every template switch.
+                    setValue("ourCompanyId", preset.companyId, {
                       shouldDirty: true,
                     });
+                    setValue("ourBankAccountId", preset.bankId, {
+                      shouldDirty: true,
+                    });
+                    setValue("primaryCurrency", preset.currency, {
+                      shouldDirty: true,
+                    });
+                  } else {
+                    // Manual templates (others_thai, blank): don't clobber
+                    // company/bank. But we *do* reset currency to the current
+                    // company's default — otherwise after picking ib_group_usd
+                    // once, USD stays stuck when switching back to a THB flow.
+                    const curCompany = ctx.companies.find(
+                      (c) => c.id === getValues("ourCompanyId"),
+                    );
+                    if (curCompany) {
+                      setValue("primaryCurrency", curCompany.defaultCurrency, {
+                        shouldDirty: true,
+                      });
+                    }
+                  }
+                  // USD conversion template has its own USD-equivalent logic
+                  // on the PDF — don't double up.
+                  if (tpl === "ib_group_usd") {
+                    setValue("showUsdEquivalent", false, { shouldDirty: true });
                   }
                 },
               })}

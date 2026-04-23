@@ -31,6 +31,7 @@ const templates = [
   "crypto",
   "ibg_kas",
   "others_thai",
+  "blank",
 ] as const;
 
 const currencies = ["THB", "USD", "EUR", "RUB"] as const;
