@@ -15,19 +15,38 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireSuperAdmin } from "@/lib/auth-helpers";
+import { auth } from "@/auth";
 import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+// Accept either a super-admin session (button on /admin) or a bearer token
+// matching MIGRATION_SECRET (for curl during one-shot infra migration).
+async function authorize(req: Request): Promise<{ actorId: string | null } | { error: string; status: number }> {
+  const secret = process.env.MIGRATION_SECRET;
+  const auth_header = req.headers.get("authorization");
+  if (secret && auth_header === `Bearer ${secret}`) {
+    return { actorId: null };
+  }
+  const session = await auth();
+  if (session?.user?.role === "super_admin") {
+    return { actorId: session.user.id };
+  }
+  return { error: "Forbidden", status: 403 };
+}
 
 type RowResult =
   | { id: string; number: string | null; status: "skipped"; reason: string }
   | { id: string; number: string | null; status: "regenerated"; oldUrl: string; newUrl: string }
   | { id: string; number: string | null; status: "error"; error: string };
 
-export async function POST() {
-  const session = await requireSuperAdmin();
+export async function POST(req: Request) {
+  const authResult = await authorize(req);
+  if ("error" in authResult) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+  }
+  const actorId = authResult.actorId;
 
   // Detect the "current" blob host from BLOB_READ_WRITE_TOKEN indirectly: we
   // don't have it, but we can probe by looking at the most recently regenerated
@@ -61,7 +80,7 @@ export async function POST() {
       continue;
     }
     try {
-      const gen = await regenerateInvoicePdf(inv.id, session.user.id);
+      const gen = await regenerateInvoicePdf(inv.id, actorId);
       results.push({
         id: inv.id,
         number: inv.number,
