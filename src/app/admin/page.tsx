@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminAccess } from "@/lib/auth-helpers";
+import { MigratePdfsButton } from "./MigratePdfsButton";
 
 type Card = {
   title: string;
@@ -106,6 +107,18 @@ export default async function AdminDashboardPage() {
           </li>
         </ul>
       </div>
+
+      {isSuperAdmin && (
+        <div className="border rounded-lg p-6">
+          <h2 className="font-medium mb-1">Maintenance</h2>
+          <p className="text-sm text-zinc-500 mb-3">
+            Migrate invoices whose PDF still lives on the old private Blob store
+            to the new public store. Safe to re-run — already-public PDFs are
+            skipped.
+          </p>
+          <MigratePdfsButton />
+        </div>
+      )}
     </div>
   );
 }
