@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/invoices/*/pdf": ["./node_modules/@sparticuz/chromium/**"],
     "/api/invoices/*/pdf/download": ["./node_modules/@sparticuz/chromium/**"],
+    "/api/admin/regenerate-pdfs": ["./node_modules/@sparticuz/chromium/**"],
   },
 };
 
