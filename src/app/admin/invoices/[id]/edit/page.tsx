@@ -53,7 +53,9 @@ export default async function EditInvoicePage(
   };
 
   const defaults: InvoiceFormValues = {
-    template: invoice.template,
+    // "others_thai" was retired — legacy drafts using it load in as "blank"
+    // (same effect — fully manual template) so the form type stays narrow.
+    template: invoice.template === "others_thai" ? "blank" : invoice.template,
     ourCompanyId: invoice.ourCompanyId,
     ourBankAccountId: invoice.ourBankAccountId,
     counterpartyId: invoice.counterpartyId,
@@ -70,7 +72,7 @@ export default async function EditInvoicePage(
     vatIncluded: invoice.vatIncluded,
     whtApplied: invoice.whtApplied,
     notesText: invoice.notesText ?? "",
-    serialNumberOverride: invoice.serialNumberOverride ?? null,
+    numberOverride: invoice.numberOverride ?? "",
     items: invoice.items.map((it) => {
       if (it.itemType === "commission") {
         return {

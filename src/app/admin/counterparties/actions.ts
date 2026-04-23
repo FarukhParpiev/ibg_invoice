@@ -27,8 +27,13 @@ type QuickAddResult =
   | { ok: true; id: string; name: string }
   | { ok: false; error: string };
 
+// Quick-add captures the three fields that actually show up on the PDF —
+// name, tax ID, address. Everything else (phone/email/notes) can be filled
+// in later on the edit page.
 const quickAddSchema = z.object({
   name: z.string().min(1, "Name required").max(200),
+  taxId: z.string().max(100).optional().or(z.literal("")),
+  address: z.string().max(1000).optional().or(z.literal("")),
   preferredLanguage: z.enum(["en", "th"]).default("en"),
 });
 
@@ -46,6 +51,8 @@ export async function createCounterpartyQuick(
   const created = await prisma.counterparty.create({
     data: {
       name: parsed.data.name,
+      taxId: parsed.data.taxId || null,
+      address: parsed.data.address || null,
       preferredLanguage: parsed.data.preferredLanguage,
       isActive: true,
       isAdHoc: false,
@@ -70,6 +77,8 @@ export async function createCounterpartyAdHoc(
   const created = await prisma.counterparty.create({
     data: {
       name: parsed.data.name,
+      taxId: parsed.data.taxId || null,
+      address: parsed.data.address || null,
       preferredLanguage: parsed.data.preferredLanguage,
       isActive: true,
       isAdHoc: true,

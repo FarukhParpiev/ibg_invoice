@@ -12,7 +12,10 @@ export function PdfPreview({ invoiceId }: { invoiceId: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   // Cache-busting token: bumping it forces the iframe to re-fetch after the
   // user hits "Regenerate PDF" without reloading the whole detail page.
-  const [v, setV] = useState(0);
+  // Seed from Date.now() so that even if the browser cached an earlier error
+  // response for this route (e.g. a 404/403 before the blob was migrated)
+  // we don't surface it on page reload.
+  const [v, setV] = useState<number>(() => Date.now());
 
   const src = `/api/invoices/${invoiceId}/pdf/download?inline=1&v=${v}`;
 
@@ -42,7 +45,7 @@ export function PdfPreview({ invoiceId }: { invoiceId: string }) {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setV((n) => n + 1)}
+            onClick={() => setV(Date.now())}
             className="text-xs border rounded px-2.5 py-1 hover:bg-white"
             title="Reload the preview (useful after Regenerate PDF)"
           >

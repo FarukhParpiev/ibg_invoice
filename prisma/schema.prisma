@@ -214,7 +214,7 @@ enum InvoiceTemplate {
   wise_thb        // Info Wise THB / Invoice Wise THB
   crypto          // Info crypto / Invoice crypto
   ibg_kas         // BLANK IBG Kas (cash variant)
-  others_thai     // Info others Thai
+  others_thai     // @deprecated — removed from UI options, kept in enum for schema compatibility
   blank           // Fully manual — user picks company, bank, and currency; PDF uses neutral layout
 }
 
@@ -247,11 +247,12 @@ model Invoice {
   // Используется для генерации NNNN в number.
   serialNumber Int?    @unique
 
-  // Пользовательский override для следующего номера. Если установлен на
-  // drafte, при переходе в issued его значение идёт в serialNumber (и поле
-  // очищается). Позволяет «забить» стартовый номер вручную — следующие
-  // инвойсы уже автоматически продолжат инкремент через max(serialNumber)+1.
-  serialNumberOverride Int?
+  // Пользовательский override полного номера инвойса (например
+  // "23/04/2026-0001" или любой внешний формат для переноса из другой
+  // системы). Если задан на draft, при issuance подставляется как есть в
+  // поле number и очищается. Поле serialNumber в этом случае выделяется
+  // автоматически — следующие инвойсы продолжат обычный инкремент.
+  numberOverride String?
 
   type             InvoiceType     @default(invoice)
   parentInvoiceId  String?         // для receipt — ссылка на оплаченный инвойс

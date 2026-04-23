@@ -23,6 +23,9 @@ import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
 
 // ────────────────────────────── Schemas ──────────────────────────────
 
+// "others_thai" is deprecated — dropped from the UI in favour of the "blank"
+// manual template. The Prisma enum still accepts it so old records load, but
+// new invoices can't select it.
 const templates = [
   "ibg_thb",
   "ib_group_thb",
@@ -30,7 +33,6 @@ const templates = [
   "wise_thb",
   "crypto",
   "ibg_kas",
-  "others_thai",
   "blank",
 ] as const;
 
@@ -112,17 +114,17 @@ const invoiceSchema = z.object({
 
   notesText: z.string().max(10000).optional().or(z.literal("")),
 
-  // Optional manual override for the next issued number. Empty string / null /
-  // NaN → auto. Must be a positive integer when set; validated against the
-  // existing max(serialNumber) when issuing.
-  serialNumberOverride: z
+  // Optional manual override for the full invoice number when issuing.
+  // Accepts any string — e.g. "23/04/2026-0001" or an external-system format
+  // when migrating legacy invoices. Leave blank to use the default
+  // DD/MM/YYYY-NNNN generator.
+  numberOverride: z
     .preprocess(
       (v) => {
         if (v === "" || v == null) return null;
-        const n = typeof v === "number" ? v : Number(v);
-        return Number.isFinite(n) ? Math.trunc(n) : null;
+        return typeof v === "string" ? v.trim() || null : String(v).trim() || null;
       },
-      z.number().int().positive().nullable(),
+      z.string().max(100).nullable(),
     )
     .optional(),
 
@@ -271,7 +273,7 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
       type: "invoice",
       status: "draft",
       template: v.template,
-      serialNumberOverride: v.serialNumberOverride ?? null,
+      numberOverride: v.numberOverride ?? null,
 
       primaryCurrency,
       showUsdEquivalent,
@@ -380,7 +382,7 @@ export async function updateDraftInvoice(
       where: { id },
       data: {
         template: v.template,
-        serialNumberOverride: v.serialNumberOverride ?? null,
+        numberOverride: v.numberOverride ?? null,
         primaryCurrency,
         showUsdEquivalent,
         exchangeRate: toDecimalOrNull(v.exchangeRate ?? null),
@@ -447,13 +449,19 @@ export async function issueInvoice(id: string): Promise<Result> {
           throw new Error("A receipt cannot be issued directly");
         }
 
-        // If the user pinned a starting number on the draft, use it. Unique
-        // index on serialNumber enforces no collision; if it throws we retry
-        // at the outer catch (which re-runs the transaction).
-        // After issuance we clear the override — subsequent invoices pick
-        // the next value automatically via max(serialNumber)+1.
-        const serial = inv.serialNumberOverride ?? (await allocateNextSerial(tx));
-        const number = buildInvoiceNumber(inv.issueDate, serial);
+        // Always allocate a fresh serial for sequencing; the unique index on
+        // serialNumber protects against races (the outer retry kicks in if
+        // we collide with a concurrent issuance).
+        const serial = await allocateNextSerial(tx);
+        // If the user pinned a custom full number on the draft (e.g. to
+        // match a legacy external format), use it verbatim. Otherwise fall
+        // back to the default DD/MM/YYYY-NNNN generator. The override is
+        // cleared after issuance so any subsequent regen/re-issue doesn't
+        // pick it up again.
+        const number =
+          inv.numberOverride && inv.numberOverride.trim().length > 0
+            ? inv.numberOverride.trim()
+            : buildInvoiceNumber(inv.issueDate, serial);
 
         return tx.invoice.update({
           where: { id },
@@ -461,7 +469,7 @@ export async function issueInvoice(id: string): Promise<Result> {
             status: "issued",
             number,
             serialNumber: serial,
-            serialNumberOverride: null,
+            numberOverride: null,
             issuedById: session.user.id,
           },
         });

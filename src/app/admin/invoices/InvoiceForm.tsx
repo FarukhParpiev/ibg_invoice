@@ -35,6 +35,7 @@ export type InvoiceFormContext = {
   paymentTerms: Array<{ id: string; code: string; label: string }>;
 };
 
+// "others_thai" was retired — covered by the "blank" manual template now.
 const templateOptions: { value: InvoiceFormValues["template"]; label: string }[] = [
   { value: "ibg_thb", label: "IBG THB (residents)" },
   { value: "ib_group_thb", label: "IB Group THB" },
@@ -42,7 +43,6 @@ const templateOptions: { value: InvoiceFormValues["template"]; label: string }[]
   { value: "wise_thb", label: "Wise USD" },
   { value: "crypto", label: "Crypto (BEP20)" },
   { value: "ibg_kas", label: "IBG Kas (cash)" },
-  { value: "others_thai", label: "Others Thai" },
   { value: "blank", label: "Blank (manual)" },
 ];
 
@@ -97,7 +97,7 @@ const TEMPLATE_PRESET_RULES: Record<
     bank: /Kasikorn/i,
     currency: "THB",
   },
-  others_thai: {},
+  // Manual: blank clears the preset fields so the user picks fresh.
   blank: {},
 };
 
@@ -154,7 +154,7 @@ const emptyDefaults: InvoiceFormValues = {
   vatIncluded: false,
   whtApplied: false,
   notesText: "",
-  serialNumberOverride: null,
+  numberOverride: "",
   items: [
     {
       itemType: "commission",
@@ -187,8 +187,7 @@ export function InvoiceForm({
   const form = useForm<InvoiceFormValues>({
     defaultValues: defaults ?? emptyDefaults,
   });
-  const { register, control, handleSubmit, formState, setValue, getValues, reset } =
-    form;
+  const { register, control, handleSubmit, formState, setValue } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
   // Local, mutable list of counterparties: seeded from SSR, grows when the
@@ -224,6 +223,39 @@ export function InvoiceForm({
     const next = addDaysIso(issueDate, DEFAULT_DUE_DATE_OFFSET_DAYS);
     if (next) setValue("dueDate", next, { shouldDirty: true });
   }, [issueDate, dueDateDirty, setValue]);
+
+  // Template preset runs via an effect rather than register's onChange so it
+  // fires reliably in both create and edit modes (register.onChange sometimes
+  // misses the first native change event right after SSR hydration, which
+  // left wise/crypto/ib_group_thb stuck on the default company). On mount we
+  // skip the effect — the initial defaults are already consistent (edit mode)
+  // or empty (create mode) and we don't want to clobber either.
+  const templateInitRef = useRef(true);
+  useEffect(() => {
+    if (templateInitRef.current) {
+      templateInitRef.current = false;
+      return;
+    }
+    const preset = findTemplatePreset(template, ctx.companies);
+    if (preset) {
+      // Auto-select our company, bank and currency so the user doesn't have
+      // to pick them again every time they switch templates.
+      setValue("ourCompanyId", preset.companyId, { shouldDirty: true });
+      setValue("ourBankAccountId", preset.bankId, { shouldDirty: true });
+      setValue("primaryCurrency", preset.currency, { shouldDirty: true });
+    } else if (template === "blank") {
+      // Blank template == "start over" — wipe the three fields so nothing
+      // leaks through from the previously selected template.
+      setValue("ourCompanyId", "", { shouldDirty: true });
+      setValue("ourBankAccountId", "", { shouldDirty: true });
+      setValue("primaryCurrency", "THB", { shouldDirty: true });
+    }
+    // The USD-conversion template runs its own USD-equivalent math on the
+    // PDF — suppress the "Show USD equivalent" checkbox to avoid doubling up.
+    if (template === "ib_group_usd") {
+      setValue("showUsdEquivalent", false, { shouldDirty: true });
+    }
+  }, [template, ctx.companies, setValue]);
 
   // For the IB Group USD template, input is in THB, amount is computed in
   // USD via the rate. Dedicated mode in the form and in the PDF.
@@ -301,47 +333,9 @@ export function InvoiceForm({
         <h2 className="font-medium">Details</h2>
         <div className="grid grid-cols-2 gap-4">
           <Field label="PDF template">
-            <select
-              className="input"
-              {...register("template", {
-                onChange: (e) => {
-                  const tpl = e.target
-                    .value as InvoiceFormValues["template"];
-                  const preset = findTemplatePreset(tpl, ctx.companies);
-                  if (preset) {
-                    // Auto-fill company + bank + currency so the user doesn't
-                    // have to pick them again for every template switch.
-                    setValue("ourCompanyId", preset.companyId, {
-                      shouldDirty: true,
-                    });
-                    setValue("ourBankAccountId", preset.bankId, {
-                      shouldDirty: true,
-                    });
-                    setValue("primaryCurrency", preset.currency, {
-                      shouldDirty: true,
-                    });
-                  } else {
-                    // Manual templates (others_thai, blank): don't clobber
-                    // company/bank. But we *do* reset currency to the current
-                    // company's default — otherwise after picking ib_group_usd
-                    // once, USD stays stuck when switching back to a THB flow.
-                    const curCompany = ctx.companies.find(
-                      (c) => c.id === getValues("ourCompanyId"),
-                    );
-                    if (curCompany) {
-                      setValue("primaryCurrency", curCompany.defaultCurrency, {
-                        shouldDirty: true,
-                      });
-                    }
-                  }
-                  // USD conversion template has its own USD-equivalent logic
-                  // on the PDF — don't double up.
-                  if (tpl === "ib_group_usd") {
-                    setValue("showUsdEquivalent", false, { shouldDirty: true });
-                  }
-                },
-              })}
-            >
+            {/* Preset logic lives in a useEffect above — see the comment
+                there for why it's not inside register's onChange. */}
+            <select className="input" {...register("template")}>
               {templateOptions.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
@@ -830,29 +824,24 @@ export function InvoiceForm({
           </summary>
           <div className="mt-3 grid grid-cols-2 gap-4">
             <Field
-              label="Start serial number (optional)"
-              error={formState.errors.serialNumberOverride?.message as string | undefined}
+              label="Full invoice number (optional)"
+              error={formState.errors.numberOverride?.message as string | undefined}
             >
+              {/* Free-form text so the user can paste any format they need
+                  — e.g. legacy "23/04/2026-0001" when migrating from an
+                  external system. The unique index on Invoice.number still
+                  guards against collisions at issuance time. */}
               <input
-                type="number"
-                min={1}
-                step={1}
+                type="text"
                 className="input"
-                placeholder="auto"
-                {...register("serialNumberOverride", {
-                  setValueAs: (v) => {
-                    // Empty string → null so the form stays on "auto" mode
-                    // (otherwise zod would see NaN and complain).
-                    if (v === "" || v == null) return null;
-                    const n = Number(v);
-                    return Number.isFinite(n) ? Math.trunc(n) : null;
-                  },
-                })}
+                placeholder="e.g. 23/04/2026-0001"
+                {...register("numberOverride")}
               />
             </Field>
             <div className="self-end text-xs text-zinc-500 pb-2">
-              Used only when this draft is issued. Next invoices auto-increment
-              from here — leave blank to keep the current sequence.
+              Used verbatim when this draft is issued. Leave blank to use the
+              default DD/MM/YYYY-NNNN format — next invoices keep auto-
+              incrementing regardless.
             </div>
           </div>
         </details>
@@ -1219,6 +1208,8 @@ function QuickAddCounterpartyModal({
   onCreated: (cp: { id: string; name: string }) => void;
 }) {
   const [name, setName] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [address, setAddress] = useState("");
   const [language, setLanguage] = useState<"en" | "th">("en");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1238,7 +1229,12 @@ function QuickAddCounterpartyModal({
     setBusy(true);
     const action =
       mode === "adHoc" ? createCounterpartyAdHoc : createCounterpartyQuick;
-    const res = await action({ name: trimmed, preferredLanguage: language });
+    const res = await action({
+      name: trimmed,
+      taxId: taxId.trim(),
+      address: address.trim(),
+      preferredLanguage: language,
+    });
     setBusy(false);
     if (!res.ok) {
       setError(res.error);
@@ -1257,12 +1253,11 @@ function QuickAddCounterpartyModal({
     >
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-md p-5 space-y-4"
+        // Enter-to-submit is intentionally NOT bound here because the address
+        // field is a multi-line textarea — pressing Enter inside it should add
+        // a new line, not submit the modal. Esc still closes.
         onKeyDown={(e) => {
           if (e.key === "Escape") onClose();
-          if (e.key === "Enter" && !busy) {
-            e.preventDefault();
-            save();
-          }
         }}
       >
         <div className="flex items-start justify-between">
@@ -1273,7 +1268,7 @@ function QuickAddCounterpartyModal({
             <p className="text-xs text-zinc-500 mt-0.5">
               {mode === "adHoc"
                 ? "One-off — won't show up in the main counterparty list."
-                : "Basic fields only — edit details later if needed."}
+                : "Key fields for the PDF — edit the rest later if needed."}
             </p>
           </div>
           <button
@@ -1298,6 +1293,27 @@ function QuickAddCounterpartyModal({
                 ? 'e.g. "Miss Larisa (deposit)"'
                 : "Full legal name"
             }
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-zinc-700">Tax ID (optional)</span>
+          <input
+            className="input"
+            value={taxId}
+            onChange={(e) => setTaxId(e.target.value)}
+            placeholder="e.g. 0105561000000"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-zinc-700">Address (optional)</span>
+          <textarea
+            rows={2}
+            className="input resize-y"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Street, city, postal code, country"
           />
         </label>
 

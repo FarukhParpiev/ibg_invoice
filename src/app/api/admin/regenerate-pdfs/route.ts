@@ -37,7 +37,8 @@ export async function POST() {
   const invoices = await prisma.invoice.findMany({
     where: {
       pdfUrl: { not: null },
-      status: { in: ["issued", "paid", "cancelled"] },
+      // Include drafts too: "Copy public link" on a draft's Regenerate result
+      // still shows up in the UI and needs to resolve.
     },
     select: { id: true, number: true, pdfUrl: true },
     orderBy: { issueDate: "asc" },

@@ -40,7 +40,10 @@ export async function GET(
     },
   });
   if (!inv) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not found" },
+      { status: 404, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   let url = inv.pdfUrl;
@@ -51,17 +54,37 @@ export async function GET(
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Generation error";
-      return NextResponse.json({ error: message }, { status: 500 });
+      return NextResponse.json(
+        { error: message },
+        { status: 500, headers: { "Cache-Control": "no-store" } },
+      );
     }
   }
 
   // Public blob URL → plain fetch, no token needed. We still proxy the body
   // so we control Content-Disposition (pretty filename) and the inline flag.
-  const upstream = await fetch(url);
+  // If the stored URL points at a now-dead private store (legacy rows that
+  // haven't been re-generated since the migration), self-heal by regenerating
+  // the PDF into the current public store and retrying once.
+  let upstream = await fetch(url);
+  if (upstream.status === 403 || upstream.status === 404) {
+    try {
+      const gen = await regenerateInvoicePdf(id, session.user.id);
+      url = gen.url;
+      upstream = await fetch(url);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Regen error";
+      return NextResponse.json(
+        { error: `PDF regen failed: ${message}` },
+        { status: 500, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+  }
   if (!upstream.ok || !upstream.body) {
     return NextResponse.json(
       { error: `PDF not reachable in storage (${upstream.status})` },
-      { status: 404 },
+      { status: 404, headers: { "Cache-Control": "no-store" } },
     );
   }
 
