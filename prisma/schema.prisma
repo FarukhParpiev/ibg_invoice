@@ -167,6 +167,10 @@ model Counterparty {
   preferredLanguage PreferredLanguage @default(en)
   notes             String?           @db.Text
   isActive          Boolean           @default(true)
+  // Одноразовые контрагенты — напр. "Miss Larisa" для депозитов. Не попадают
+  // в основной справочник /admin/counterparties, но используются в инвойсе
+  // как обычный counterpartyId. Создаются через quick-add прямо из формы инвойса.
+  isAdHoc           Boolean           @default(false)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -175,6 +179,7 @@ model Counterparty {
   // Индекс для type-ahead поиска по имени (включая тайский)
   // Полнотекстовый pg_trgm индекс добавим через миграцию отдельно
   @@index([isActive])
+  @@index([isAdHoc])
   @@index([name])
   @@map("counterparties")
 }

@@ -10,6 +10,9 @@ export default async function CounterpartiesListPage(
   const showArchived = sp.archived === "1" || sp.all === "1";
 
   const where = {
+    // Ad-hoc ("Miss Larisa"-style one-offs created from the invoice form) are
+    // hidden from the main directory so the list stays a curated contact book.
+    isAdHoc: false,
     ...(q
       ? {
           OR: [
@@ -29,8 +32,8 @@ export default async function CounterpartiesListPage(
       take: 100,
       include: { _count: { select: { invoices: true } } },
     }),
-    prisma.counterparty.count({ where: { isActive: true } }),
-    prisma.counterparty.count(),
+    prisma.counterparty.count({ where: { isActive: true, isAdHoc: false } }),
+    prisma.counterparty.count({ where: { isAdHoc: false } }),
   ]);
 
   const flashDeleted = sp.deleted === "1";

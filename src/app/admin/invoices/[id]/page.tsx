@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { InvoiceActions } from "./InvoiceActions";
 import { PdfActions } from "./PdfActions";
+import { PdfPreview } from "./PdfPreview";
 import { DuplicateButton } from "./DuplicateButton";
 import type { InvoiceStatus } from "@prisma/client";
 
@@ -17,10 +18,11 @@ const templateLabels: Record<string, string> = {
   ibg_thb: "IBG THB",
   ib_group_thb: "IB Group THB",
   ib_group_usd: "IB Group USD",
-  wise_thb: "Wise THB",
+  wise_thb: "Wise USD",
   crypto: "Crypto",
   ibg_kas: "IBG Kas",
   others_thai: "Others Thai",
+  blank: "Blank",
 };
 
 function fmt(n: number | import("@prisma/client").Prisma.Decimal | null | undefined) {
@@ -141,6 +143,10 @@ export default async function InvoiceDetailPage(
           </div>
         )}
       </div>
+
+      {/* In-app preview + Print. Only after the PDF has been generated at
+          least once — drafts don't have a pdfUrl yet, so the iframe would 404. */}
+      {invoice.pdfUrl && <PdfPreview invoiceId={invoice.id} />}
 
       <section className="grid grid-cols-2 gap-4">
         <Card title="Our company">

@@ -21,6 +21,65 @@ export type CounterpartyFormValues = z.infer<typeof counterpartySchema>;
 
 type Result = { ok: true; id: string } | { ok: false; error: string };
 
+// Quick-add from the invoice form. We return name too so the combobox can
+// show the selection label without a roundtrip.
+type QuickAddResult =
+  | { ok: true; id: string; name: string }
+  | { ok: false; error: string };
+
+const quickAddSchema = z.object({
+  name: z.string().min(1, "Name required").max(200),
+  preferredLanguage: z.enum(["en", "th"]).default("en"),
+});
+
+// Full quick-add: adds a regular counterparty (shows up in /admin/counterparties
+// next time). Use when the user forgot to create the counterparty up front but
+// this is a real, reusable one.
+export async function createCounterpartyQuick(
+  rawValues: unknown,
+): Promise<QuickAddResult> {
+  await requireAdminAccess();
+  const parsed = quickAddSchema.safeParse(rawValues);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
+  }
+  const created = await prisma.counterparty.create({
+    data: {
+      name: parsed.data.name,
+      preferredLanguage: parsed.data.preferredLanguage,
+      isActive: true,
+      isAdHoc: false,
+    },
+    select: { id: true, name: true },
+  });
+  revalidatePath("/admin/counterparties");
+  return { ok: true, id: created.id, name: created.name };
+}
+
+// Ad-hoc: one-off counterparties (e.g. "Miss Larisa — deposit") that should
+// NOT clutter the main directory. Excluded from /admin/counterparties; still
+// reachable via the usual counterpartyId FK.
+export async function createCounterpartyAdHoc(
+  rawValues: unknown,
+): Promise<QuickAddResult> {
+  await requireAdminAccess();
+  const parsed = quickAddSchema.safeParse(rawValues);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Validation error" };
+  }
+  const created = await prisma.counterparty.create({
+    data: {
+      name: parsed.data.name,
+      preferredLanguage: parsed.data.preferredLanguage,
+      isActive: true,
+      isAdHoc: true,
+    },
+    select: { id: true, name: true },
+  });
+  // No revalidation of /admin/counterparties — ad-hoc entries don't appear there.
+  return { ok: true, id: created.id, name: created.name };
+}
+
 export async function createCounterparty(rawValues: unknown): Promise<Result> {
   await requireAdminAccess();
   const parsed = counterpartySchema.safeParse(rawValues);

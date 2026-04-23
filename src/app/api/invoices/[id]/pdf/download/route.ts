@@ -16,11 +16,16 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const session = await requireAdminAccess();
   const { id } = await ctx.params;
+
+  // ?inline=1 switches from "attachment" (browser offers Save As) to "inline"
+  // (browser renders it in an iframe / PDF viewer). Used by the in-app preview
+  // on the invoice detail page.
+  const inline = new URL(req.url).searchParams.get("inline") === "1";
 
   const inv = await prisma.invoice.findUnique({
     where: { id },
@@ -79,7 +84,7 @@ export async function GET(
     headers: {
       "Content-Type": result.blob.contentType ?? "application/pdf",
       "Content-Length": String(result.blob.size ?? ""),
-      "Content-Disposition": `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Cache-Control": "private, no-store",
     },
   });

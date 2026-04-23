@@ -8,6 +8,10 @@ import {
   updateDraftInvoice,
   type InvoiceFormValues,
 } from "./actions";
+import {
+  createCounterpartyAdHoc,
+  createCounterpartyQuick,
+} from "../counterparties/actions";
 import { calcTotals } from "@/lib/invoice-calc";
 
 type Mode = { kind: "create" } | { kind: "edit"; id: string };
@@ -185,6 +189,15 @@ export function InvoiceForm({
   const { register, control, handleSubmit, formState, setValue, getValues, reset } =
     form;
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
+
+  // Local, mutable list of counterparties: seeded from SSR, grows when the
+  // user quick-adds a new one without leaving the invoice form.
+  const [counterpartyOptions, setCounterpartyOptions] = useState(
+    ctx.counterparties,
+  );
+  const [cpModal, setCpModal] = useState<
+    { open: false } | { open: true; mode: "full" | "adHoc" }
+  >({ open: false });
 
   // Live values used to recompute totals
   const watchedItems = useWatch({ control, name: "items" });
@@ -395,18 +408,41 @@ export function InvoiceForm({
           </Field>
 
           <Field label="Counterparty" error={formState.errors.counterpartyId?.message} wide>
-            <Controller
-              control={control}
-              name="counterpartyId"
-              render={({ field }) => (
-                <CounterpartyCombobox
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  options={ctx.counterparties.filter((c) => c.isActive)}
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <Controller
+                  control={control}
+                  name="counterpartyId"
+                  render={({ field }) => (
+                    <CounterpartyCombobox
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      options={counterpartyOptions.filter((c) => c.isActive)}
+                    />
+                  )}
                 />
-              )}
-            />
+              </div>
+              {/* Quick-add buttons — keep the user on the page when they spot a
+                  missing counterparty mid-form. "New" creates a regular entry;
+                  "Ad-hoc" is for one-off deposit names ("Miss Larisa") that
+                  shouldn't bloat the main directory. */}
+              <button
+                type="button"
+                onClick={() => setCpModal({ open: true, mode: "full" })}
+                className="text-sm border rounded px-3 py-2 hover:bg-zinc-50 whitespace-nowrap"
+              >
+                + New
+              </button>
+              <button
+                type="button"
+                onClick={() => setCpModal({ open: true, mode: "adHoc" })}
+                className="text-sm border rounded px-3 py-2 hover:bg-zinc-50 whitespace-nowrap"
+                title="One-off — won't appear in the main counterparty list"
+              >
+                + Ad-hoc
+              </button>
+            </div>
           </Field>
         </div>
       </section>
@@ -840,6 +876,22 @@ export function InvoiceForm({
         }
         .input:focus { outline: 2px solid rgba(0,0,0,0.15); outline-offset: 0; }
       `}</style>
+
+      {cpModal.open && (
+        <QuickAddCounterpartyModal
+          mode={cpModal.mode}
+          onClose={() => setCpModal({ open: false })}
+          onCreated={(cp) => {
+            // Extend the local options and snap the combobox onto the new entry.
+            setCounterpartyOptions((prev) => [
+              ...prev,
+              { id: cp.id, name: cp.name, isActive: true },
+            ]);
+            setValue("counterpartyId", cp.id, { shouldDirty: true });
+            setCpModal({ open: false });
+          }}
+        />
+      )}
     </form>
   );
 }
@@ -1107,6 +1159,147 @@ function CounterpartyCombobox({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Quick-add modal for counterparties. Two flavours:
+//   "full"  → regular counterparty, appears in /admin/counterparties
+//   "adHoc" → one-off, excluded from the main directory (e.g. "Miss Larisa")
+// Minimal fields (name + language) — anything else can be filled in later on
+// the dedicated edit page. Returns the new counterparty to the parent, which
+// decides how to wire it into the form state.
+// ───────────────────────────────────────────────────────────────────────────
+
+function QuickAddCounterpartyModal({
+  mode,
+  onClose,
+  onCreated,
+}: {
+  mode: "full" | "adHoc";
+  onClose: () => void;
+  onCreated: (cp: { id: string; name: string }) => void;
+}) {
+  const [name, setName] = useState("");
+  const [language, setLanguage] = useState<"en" | "th">("en");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const save = async () => {
+    setError(null);
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError("Name is required");
+      return;
+    }
+    setBusy(true);
+    const action =
+      mode === "adHoc" ? createCounterpartyAdHoc : createCounterpartyQuick;
+    const res = await action({ name: trimmed, preferredLanguage: language });
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    onCreated({ id: res.id, name: res.name });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4"
+      onMouseDown={(e) => {
+        // Click outside the panel closes the modal.
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-md p-5 space-y-4"
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onClose();
+          if (e.key === "Enter" && !busy) {
+            e.preventDefault();
+            save();
+          }
+        }}
+      >
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-semibold text-lg">
+              {mode === "adHoc" ? "New ad-hoc counterparty" : "New counterparty"}
+            </h3>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {mode === "adHoc"
+                ? "One-off — won't show up in the main counterparty list."
+                : "Basic fields only — edit details later if needed."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-zinc-400 hover:text-zinc-700 text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-zinc-700">Name</span>
+          <input
+            ref={inputRef}
+            className="input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={
+              mode === "adHoc"
+                ? 'e.g. "Miss Larisa (deposit)"'
+                : "Full legal name"
+            }
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-zinc-700">Preferred language</span>
+          <select
+            className="input"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as "en" | "th")}
+          >
+            <option value="en">English</option>
+            <option value="th">Thai</option>
+          </select>
+        </label>
+
+        {error && (
+          <div className="text-sm rounded bg-red-50 text-red-700 px-3 py-2">
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="border rounded px-4 py-2 text-sm hover:bg-zinc-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy}
+            className="bg-black text-white rounded px-4 py-2 text-sm hover:bg-zinc-800 disabled:opacity-40"
+          >
+            {busy ? "Saving…" : "Create"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
