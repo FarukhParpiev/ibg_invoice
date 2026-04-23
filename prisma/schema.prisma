@@ -247,6 +247,12 @@ model Invoice {
   // Используется для генерации NNNN в number.
   serialNumber Int?    @unique
 
+  // Пользовательский override для следующего номера. Если установлен на
+  // drafte, при переходе в issued его значение идёт в serialNumber (и поле
+  // очищается). Позволяет «забить» стартовый номер вручную — следующие
+  // инвойсы уже автоматически продолжат инкремент через max(serialNumber)+1.
+  serialNumberOverride Int?
+
   type             InvoiceType     @default(invoice)
   parentInvoiceId  String?         // для receipt — ссылка на оплаченный инвойс
   parentInvoice    Invoice?        @relation("InvoiceReceipt", fields: [parentInvoiceId], references: [id])

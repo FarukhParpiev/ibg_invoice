@@ -70,6 +70,7 @@ export default async function EditInvoicePage(
     vatIncluded: invoice.vatIncluded,
     whtApplied: invoice.whtApplied,
     notesText: invoice.notesText ?? "",
+    serialNumberOverride: invoice.serialNumberOverride ?? null,
     items: invoice.items.map((it) => {
       if (it.itemType === "commission") {
         return {

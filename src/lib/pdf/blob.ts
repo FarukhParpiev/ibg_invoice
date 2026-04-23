@@ -1,8 +1,10 @@
-// PDF upload to Vercel Blob. The store is configured as private — we
-// serve the PDF only through the auth-gated stream at
-// /api/invoices/[id]/pdf/download.
-// blob.url in the DB is a reference for a later get(), not a public URL:
-// you cannot open it directly in the browser, a token is required.
+// PDF upload to Vercel Blob. PDFs are uploaded with `access: "public"` so
+// that the returned URL is a permanent shareable link — the user pastes it
+// into CRM deal cards, and the other side can open the PDF without needing
+// an account. The path includes a timestamp + random nonce, so the URL is
+// unguessable in practice.
+// The auth-gated /api/invoices/[id]/pdf/download route is still kept as the
+// "pretty filename" download entrypoint used by the in-app UI.
 
 import { put, del } from "@vercel/blob";
 import { randomBytes } from "node:crypto";
@@ -28,8 +30,11 @@ export async function uploadInvoicePdf(
 ): Promise<UploadedPdf> {
   const pathname = makeKey(invoiceId, number);
   const blob = await put(pathname, pdf, {
-    access: "private",
+    access: "public",
     contentType: "application/pdf",
+    // makeKey already injects a 48-bit hex nonce + timestamp, which is
+    // unguessable enough. Skipping the suffix keeps the URL stable once
+    // we've written the DB record.
     addRandomSuffix: false,
   });
   return {

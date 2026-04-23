@@ -48,12 +48,12 @@ export function PdfActions({
 
   const handleCopy = async () => {
     if (!pdfUrl) return;
-    // Copy our own auth-gated URL, not the raw Vercel Blob.
-    // The private blob store returns Forbidden without auth, while our
-    // endpoint checks the session and streams the file.
-    const downloadUrl = `${window.location.origin}/api/invoices/${invoiceId}/pdf/download`;
+    // Blobs are uploaded as public — pdfUrl is a permanent, shareable
+    // Vercel Blob URL. This is the one we want in CRM deal cards: no auth,
+    // no redirect, opens straight to the PDF. The URL is long + nonce'd, so
+    // it's unguessable for anyone who hasn't been given the link.
     try {
-      await navigator.clipboard.writeText(downloadUrl);
+      await navigator.clipboard.writeText(pdfUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -87,8 +87,9 @@ export function PdfActions({
             <button
               onClick={handleCopy}
               className="border rounded px-3 py-1.5 text-sm hover:bg-zinc-50"
+              title="Permanent public URL — paste into CRM deal cards"
             >
-              {copied ? "Copied ✓" : "Copy link"}
+              {copied ? "Copied ✓" : "Copy public link"}
             </button>
           </>
         )}

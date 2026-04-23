@@ -1,13 +1,13 @@
 // GET /api/invoices/[id]/pdf/download
-// Auth-gated PDF stream from private Vercel Blob. If a PDF does not exist yet,
-// regenerate it. Requires super_admin.
+// Auth-gated PDF stream with a pretty "{project} {unit}.pdf" filename. If a
+// PDF does not exist yet, regenerate it.
 //
-// A redirect is not an option: the store is private, blob.url needs a token
-// that the browser doesn't have. So we pull the stream through get() with a
-// server-side token and hand it to the client directly.
+// Blobs are now uploaded with access: "public", so pdfUrl is directly
+// reachable by HTTP and we just proxy it through here. This endpoint is
+// retained because the raw blob URL has a random pathname — users who want
+// a nice filename in Save As / Print dialogs still go through this route.
 
 import { NextResponse } from "next/server";
-import { get } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireAdminAccess } from "@/lib/auth-helpers";
 import { regenerateInvoicePdf } from "@/lib/pdf/pipeline";
@@ -55,10 +55,12 @@ export async function GET(
     }
   }
 
-  const result = await get(url, { access: "private" });
-  if (!result || result.statusCode !== 200 || !result.stream) {
+  // Public blob URL → plain fetch, no token needed. We still proxy the body
+  // so we control Content-Disposition (pretty filename) and the inline flag.
+  const upstream = await fetch(url);
+  if (!upstream.ok || !upstream.body) {
     return NextResponse.json(
-      { error: "PDF not found in storage" },
+      { error: `PDF not reachable in storage (${upstream.status})` },
       { status: 404 },
     );
   }
@@ -79,11 +81,13 @@ export async function GET(
   // Thai / Cyrillic project names we need RFC 5987 `filename*=`. Keep both
   // so older clients that ignore filename* still get an ASCII fallback.
   const asciiFallback = filename.replace(/[^\x20-\x7E]/g, "_");
-  return new NextResponse(result.stream, {
+  const upstreamLength = upstream.headers.get("content-length");
+  return new NextResponse(upstream.body, {
     status: 200,
     headers: {
-      "Content-Type": result.blob.contentType ?? "application/pdf",
-      "Content-Length": String(result.blob.size ?? ""),
+      "Content-Type":
+        upstream.headers.get("content-type") ?? "application/pdf",
+      ...(upstreamLength ? { "Content-Length": upstreamLength } : {}),
       "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       "Cache-Control": "private, no-store",
     },

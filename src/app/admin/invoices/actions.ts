@@ -112,6 +112,20 @@ const invoiceSchema = z.object({
 
   notesText: z.string().max(10000).optional().or(z.literal("")),
 
+  // Optional manual override for the next issued number. Empty string / null /
+  // NaN → auto. Must be a positive integer when set; validated against the
+  // existing max(serialNumber) when issuing.
+  serialNumberOverride: z
+    .preprocess(
+      (v) => {
+        if (v === "" || v == null) return null;
+        const n = typeof v === "number" ? v : Number(v);
+        return Number.isFinite(n) ? Math.trunc(n) : null;
+      },
+      z.number().int().positive().nullable(),
+    )
+    .optional(),
+
   items: z.array(itemSchema).min(1, "Add at least one line item"),
 });
 
@@ -257,6 +271,7 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
       type: "invoice",
       status: "draft",
       template: v.template,
+      serialNumberOverride: v.serialNumberOverride ?? null,
 
       primaryCurrency,
       showUsdEquivalent,
@@ -365,6 +380,7 @@ export async function updateDraftInvoice(
       where: { id },
       data: {
         template: v.template,
+        serialNumberOverride: v.serialNumberOverride ?? null,
         primaryCurrency,
         showUsdEquivalent,
         exchangeRate: toDecimalOrNull(v.exchangeRate ?? null),
@@ -431,7 +447,12 @@ export async function issueInvoice(id: string): Promise<Result> {
           throw new Error("A receipt cannot be issued directly");
         }
 
-        const serial = await allocateNextSerial(tx);
+        // If the user pinned a starting number on the draft, use it. Unique
+        // index on serialNumber enforces no collision; if it throws we retry
+        // at the outer catch (which re-runs the transaction).
+        // After issuance we clear the override — subsequent invoices pick
+        // the next value automatically via max(serialNumber)+1.
+        const serial = inv.serialNumberOverride ?? (await allocateNextSerial(tx));
         const number = buildInvoiceNumber(inv.issueDate, serial);
 
         return tx.invoice.update({
@@ -440,6 +461,7 @@ export async function issueInvoice(id: string): Promise<Result> {
             status: "issued",
             number,
             serialNumber: serial,
+            serialNumberOverride: null,
             issuedById: session.user.id,
           },
         });

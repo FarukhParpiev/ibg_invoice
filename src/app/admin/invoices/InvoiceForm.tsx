@@ -154,6 +154,7 @@ const emptyDefaults: InvoiceFormValues = {
   vatIncluded: false,
   whtApplied: false,
   notesText: "",
+  serialNumberOverride: null,
   items: [
     {
       itemType: "commission",
@@ -819,6 +820,42 @@ export function InvoiceForm({
             />
           </div>
         )}
+      </section>
+
+      {/* ───── Advanced (rarely used) ───── */}
+      <section className="border rounded-lg p-5 bg-white space-y-3">
+        <details>
+          <summary className="text-sm text-zinc-600 cursor-pointer select-none hover:text-zinc-900">
+            Advanced: override invoice number
+          </summary>
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <Field
+              label="Start serial number (optional)"
+              error={formState.errors.serialNumberOverride?.message as string | undefined}
+            >
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className="input"
+                placeholder="auto"
+                {...register("serialNumberOverride", {
+                  setValueAs: (v) => {
+                    // Empty string → null so the form stays on "auto" mode
+                    // (otherwise zod would see NaN and complain).
+                    if (v === "" || v == null) return null;
+                    const n = Number(v);
+                    return Number.isFinite(n) ? Math.trunc(n) : null;
+                  },
+                })}
+              />
+            </Field>
+            <div className="self-end text-xs text-zinc-500 pb-2">
+              Used only when this draft is issued. Next invoices auto-increment
+              from here — leave blank to keep the current sequence.
+            </div>
+          </div>
+        </details>
       </section>
 
       {/* ───── Notes ───── */}
