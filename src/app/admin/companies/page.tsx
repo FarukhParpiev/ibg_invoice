@@ -13,11 +13,19 @@ export default async function CompaniesListPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Our companies</h1>
-        <p className="text-sm text-zinc-500 mt-1">
-          Registry of payer companies. Used when creating invoices.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Our companies</h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            Registry of payer companies. Used when creating invoices.
+          </p>
+        </div>
+        <Link
+          href="/admin/companies/new"
+          className="bg-black text-white rounded px-4 py-2 text-sm hover:bg-zinc-800"
+        >
+          + New company
+        </Link>
       </div>
 
       <div className="border rounded-lg overflow-hidden">

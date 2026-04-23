@@ -1,16 +1,36 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { updateCompany, type CompanyFormValues } from "../actions";
+import {
+  createCompany,
+  updateCompany,
+  type CompanyFormValues,
+} from "./actions";
 
-export function CompanyEditForm({
-  id,
+type Mode = { kind: "create" } | { kind: "edit"; id: string };
+
+const emptyDefaults: CompanyFormValues = {
+  name: "",
+  legalType: "resident",
+  address: "",
+  taxId: "",
+  registrationNo: "",
+  phone: "",
+  email: "",
+  defaultCurrency: "THB",
+  isActive: true,
+};
+
+export function CompanyForm({
+  mode,
   defaults,
 }: {
-  id: string;
-  defaults: CompanyFormValues;
+  mode: Mode;
+  defaults?: CompanyFormValues;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<
     { kind: "ok" | "error"; text: string } | null
@@ -21,12 +41,24 @@ export function CompanyEditForm({
     handleSubmit,
     formState: { errors, isDirty },
     reset,
-  } = useForm<CompanyFormValues>({ defaultValues: defaults });
+  } = useForm<CompanyFormValues>({
+    defaultValues: defaults ?? emptyDefaults,
+  });
 
   const onSubmit = (values: CompanyFormValues) => {
     setMessage(null);
     startTransition(async () => {
-      const res = await updateCompany(id, values);
+      if (mode.kind === "create") {
+        const res = await createCompany(values);
+        if (res.ok) {
+          router.push(`/admin/companies/${res.id}`);
+        } else {
+          setMessage({ kind: "error", text: res.error });
+        }
+        return;
+      }
+
+      const res = await updateCompany(mode.id, values);
       if (res.ok) {
         setMessage({ kind: "ok", text: "Saved" });
         reset(values);
@@ -45,6 +77,7 @@ export function CompanyEditForm({
         <Field label="Name" error={errors.name?.message} wide>
           <input
             className="input"
+            autoFocus={mode.kind === "create"}
             {...register("name", { required: "Required" })}
           />
         </Field>
@@ -110,17 +143,25 @@ export function CompanyEditForm({
       <div className="flex gap-3">
         <button
           type="submit"
-          disabled={isPending || !isDirty}
+          disabled={isPending || (mode.kind === "edit" && !isDirty)}
           className="bg-black text-white rounded px-4 py-2 hover:bg-zinc-800 disabled:opacity-40"
         >
-          {isPending ? "Saving…" : "Save"}
+          {isPending
+            ? "Saving…"
+            : mode.kind === "create"
+              ? "Create"
+              : "Save"}
         </button>
         <button
           type="button"
-          disabled={!isDirty || isPending}
+          disabled={isPending || (mode.kind === "edit" && !isDirty)}
           onClick={() => {
-            reset(defaults);
-            setMessage(null);
+            if (mode.kind === "create") {
+              router.push("/admin/companies");
+            } else if (defaults) {
+              reset(defaults);
+              setMessage(null);
+            }
           }}
           className="rounded px-4 py-2 border hover:bg-zinc-50 disabled:opacity-40"
         >

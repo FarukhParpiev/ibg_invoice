@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/auth-helpers";
-import { CompanyEditForm } from "./CompanyEditForm";
+import { CompanyForm } from "../CompanyForm";
 
 export default async function CompanyEditPage(props: PageProps<"/admin/companies/[id]">) {
   await requireSuperAdmin();
@@ -31,8 +31,8 @@ export default async function CompanyEditPage(props: PageProps<"/admin/companies
         <h1 className="text-2xl font-semibold mt-2">{company.name}</h1>
       </div>
 
-      <CompanyEditForm
-        id={company.id}
+      <CompanyForm
+        mode={{ kind: "edit", id: company.id }}
         defaults={{
           name: company.name,
           legalType: company.legalType,

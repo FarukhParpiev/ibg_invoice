@@ -41,6 +41,21 @@ const templateOptions: { value: InvoiceFormValues["template"]; label: string }[]
   { value: "others_thai", label: "Others Thai" },
 ];
 
+// Due date = issue date + this many days by default. Hardcoded, no per-terms
+// override — users almost always use the same +5 window, and when they don't
+// they just edit the field manually (which marks the field "dirty" and stops
+// auto-updates from issueDate).
+const DEFAULT_DUE_DATE_OFFSET_DAYS = 5;
+
+function addDaysIso(iso: string, days: number): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+const todayIso = new Date().toISOString().slice(0, 10);
+
 const emptyDefaults: InvoiceFormValues = {
   template: "ibg_thb",
   ourCompanyId: "",
@@ -50,8 +65,8 @@ const emptyDefaults: InvoiceFormValues = {
   primaryCurrency: "THB",
   showUsdEquivalent: false,
   exchangeRate: null,
-  issueDate: new Date().toISOString().slice(0, 10),
-  dueDate: "",
+  issueDate: todayIso,
+  dueDate: addDaysIso(todayIso, DEFAULT_DUE_DATE_OFFSET_DAYS),
   otherDate: "",
   vatApplied: false,
   vatIncluded: false,
@@ -102,6 +117,20 @@ export function InvoiceForm({
   const primaryCurrency = useWatch({ control, name: "primaryCurrency" });
   const ourCompanyId = useWatch({ control, name: "ourCompanyId" });
   const template = useWatch({ control, name: "template" });
+  const issueDate = useWatch({ control, name: "issueDate" });
+
+  // Due date = issueDate + 5 days, but only until the user touches the field
+  // manually. Once they change it, we stop auto-syncing, so we don't clobber
+  // an explicit override every time they adjust the issue date.
+  const [dueDateDirty, setDueDateDirty] = useState<boolean>(
+    () => !!defaults?.dueDate,
+  );
+  useEffect(() => {
+    if (dueDateDirty) return;
+    if (!issueDate) return;
+    const next = addDaysIso(issueDate, DEFAULT_DUE_DATE_OFFSET_DAYS);
+    if (next) setValue("dueDate", next, { shouldDirty: true });
+  }, [issueDate, dueDateDirty, setValue]);
 
   // For the IB Group USD template, input is in THB, amount is computed in
   // USD via the rate. Dedicated mode in the form and in the PDF.
@@ -159,12 +188,10 @@ export function InvoiceForm({
           : await updateDraftInvoice(mode.id, values);
 
       if (res.ok) {
-        if (mode.kind === "create") {
-          router.push(`/admin/invoices/${res.id}`);
-        } else {
-          setMessage({ kind: "ok", text: "Saved" });
-          reset(values);
-        }
+        // Both create and edit land on the detail page — from there the user
+        // can Issue, generate the PDF, preview, etc. without a detour through
+        // the list.
+        router.push(`/admin/invoices/${res.id}`);
       } else {
         setMessage({ kind: "error", text: res.error });
       }
@@ -286,10 +313,13 @@ export function InvoiceForm({
             <input type="date" className="input" {...register("issueDate")} />
           </Field>
           <Field label="Due date">
-            <input type="date" className="input" {...register("dueDate")} />
-          </Field>
-          <Field label="Other date">
-            <input type="date" className="input" {...register("otherDate")} />
+            <input
+              type="date"
+              className="input"
+              {...register("dueDate", {
+                onChange: () => setDueDateDirty(true),
+              })}
+            />
           </Field>
 
           <Field label="Primary currency">
