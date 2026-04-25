@@ -9,6 +9,13 @@ export default async function CounterpartiesListPage(
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const showArchived = sp.archived === "1" || sp.all === "1";
 
+  // Pagination — 50 per page, prev/next at the bottom. Pages are 1-indexed in
+  // the URL because that reads better in screenshots / shared links than 0-based.
+  const PAGE_SIZE = 50;
+  const rawPage =
+    typeof sp.page === "string" ? Number.parseInt(sp.page, 10) : 1;
+  const requestedPage = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+
   const where = {
     // Ad-hoc ("Miss Larisa"-style one-offs created from the invoice form) are
     // hidden from the main directory so the list stays a curated contact book.
@@ -25,16 +32,35 @@ export default async function CounterpartiesListPage(
     ...(showArchived ? {} : { isActive: true }),
   };
 
-  const [counterparties, totalActive, totalAll] = await Promise.all([
-    prisma.counterparty.findMany({
-      where,
-      orderBy: { name: "asc" },
-      take: 100,
-      include: { _count: { select: { invoices: true } } },
-    }),
+  const [filteredCount, totalActive, totalAll] = await Promise.all([
+    prisma.counterparty.count({ where }),
     prisma.counterparty.count({ where: { isActive: true, isAdHoc: false } }),
     prisma.counterparty.count({ where: { isAdHoc: false } }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
+  // Clamp to the last page if the URL points past the end (e.g. user deleted
+  // rows after bookmarking page 4 of a 3-page result).
+  const page = Math.min(requestedPage, totalPages);
+
+  const counterparties = await prisma.counterparty.findMany({
+    where,
+    orderBy: { name: "asc" },
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    include: { _count: { select: { invoices: true } } },
+  });
+
+  // Preserve all current query params except `page` when building prev/next URLs.
+  const buildPageHref = (p: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sp.all === "1") params.set("all", "1");
+    if (sp.archived === "1") params.set("archived", "1");
+    if (p > 1) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/admin/counterparties?${qs}` : "/admin/counterparties";
+  };
 
   const flashDeleted = sp.deleted === "1";
   const flashArchived = sp.archived === "1";
@@ -135,10 +161,46 @@ export default async function CounterpartiesListPage(
         </table>
       </div>
 
-      {counterparties.length === 100 && (
-        <p className="text-xs text-zinc-500">
-          Showing first 100 results. Refine your search.
-        </p>
+      {filteredCount > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <p className="text-zinc-500">
+            {filteredCount === 0
+              ? "No results"
+              : `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(
+                  page * PAGE_SIZE,
+                  filteredCount,
+                )} of ${filteredCount}`}
+          </p>
+          <div className="flex items-center gap-2">
+            {page > 1 ? (
+              <Link
+                href={buildPageHref(page - 1)}
+                className="border rounded px-3 py-1 hover:bg-zinc-50"
+              >
+                ← Prev
+              </Link>
+            ) : (
+              <span className="border rounded px-3 py-1 text-zinc-300 cursor-not-allowed">
+                ← Prev
+              </span>
+            )}
+            <span className="text-zinc-500">
+              Page {page} of {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link
+                href={buildPageHref(page + 1)}
+                className="border rounded px-3 py-1 hover:bg-zinc-50"
+              >
+                Next →
+              </Link>
+            ) : (
+              <span className="border rounded px-3 py-1 text-zinc-300 cursor-not-allowed">
+                Next →
+              </span>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

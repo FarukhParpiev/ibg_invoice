@@ -13,6 +13,9 @@ export function SearchInput({ defaultValue }: { defaultValue: string }) {
       const params = new URLSearchParams(searchParams.toString());
       if (value) params.set("q", value);
       else params.delete("q");
+      // Whenever the search text changes, jump back to page 1 — staying on
+      // page 5 of a freshly-filtered result is rarely what the user wants.
+      params.delete("page");
       const qs = params.toString();
       router.replace(qs ? `/admin/counterparties?${qs}` : "/admin/counterparties");
     }, 250);
