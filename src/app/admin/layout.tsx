@@ -39,8 +39,10 @@ export default async function AdminLayout({
       items: [
         { href: "/admin", label: "Dashboard", icon: "◆" },
         { href: "/admin/invoices", label: "Invoices", icon: "▤" },
+        { href: "/admin/invoices/archive", label: "Archive", icon: "🗄" },
         { href: "/admin/receipts", label: "Receipts", icon: "✓" },
         { href: "/admin/counterparties", label: "Counterparties", icon: "♁" },
+        { href: "/admin/instructions", label: "Instructions", icon: "❔" },
       ],
     },
   ];

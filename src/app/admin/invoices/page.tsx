@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import type { InvoiceStatus, InvoiceType } from "@prisma/client";
-
-const statusLabels: Record<InvoiceStatus, { text: string; cls: string }> = {
-  draft: { text: "Draft", cls: "bg-zinc-100 text-zinc-700" },
-  issued: { text: "Issued", cls: "bg-blue-50 text-blue-700" },
-  paid: { text: "Paid", cls: "bg-green-50 text-green-700" },
-  cancelled: { text: "Cancelled", cls: "bg-red-50 text-red-700" },
-};
+import { BulkInvoiceTable, type BulkInvoiceRow } from "./BulkInvoiceTable";
 
 export default async function InvoicesListPage(
   props: PageProps<"/admin/invoices">,
@@ -23,6 +17,8 @@ export default async function InvoicesListPage(
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
 
   const where = {
+    // Hide archived rows from the default list — they live in /admin/invoices/archive.
+    archivedAt: null,
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(typeFilter ? { type: typeFilter } : { type: "invoice" as const }),
     ...(q
@@ -58,7 +54,7 @@ export default async function InvoicesListPage(
       : {}),
   };
 
-  const [invoices, counts] = await Promise.all([
+  const [invoices, counts, archivedCount] = await Promise.all([
     prisma.invoice.findMany({
       where,
       orderBy: [{ issueDate: "desc" }, { createdAt: "desc" }],
@@ -78,14 +74,41 @@ export default async function InvoicesListPage(
     }),
     prisma.invoice.groupBy({
       by: ["status"],
-      where: { type: "invoice" },
+      where: { type: "invoice", archivedAt: null },
       _count: true,
     }),
+    prisma.invoice.count({ where: { archivedAt: { not: null } } }),
   ]);
 
   const countMap = Object.fromEntries(counts.map((c) => [c.status, c._count]));
 
   const flashDeleted = sp.deleted === "1";
+
+  // Pre-shape rows for the client component — moves all formatting work to
+  // the server, keeping the client bundle small and serialisation simple.
+  const rows: BulkInvoiceRow[] = invoices.map((inv) => {
+    const first = inv.items[0];
+    const title = [first?.projectName, first?.unitCode]
+      .map((s) => s?.trim())
+      .filter((s): s is string => !!s)
+      .join(" ");
+    return {
+      id: inv.id,
+      number: inv.number,
+      status: inv.status,
+      type: inv.type,
+      issueDate: inv.issueDate.toISOString().slice(0, 10),
+      title,
+      companyName: inv.ourCompany.name,
+      counterpartyName: inv.counterparty.name,
+      total: Number(inv.total).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+      primaryCurrency: inv.primaryCurrency,
+      hasReceipt: inv.receipts.length > 0,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -110,7 +133,7 @@ export default async function InvoicesListPage(
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
         <FilterChip
           href="/admin/invoices"
           active={statusFilter === null && typeFilter === null}
@@ -122,7 +145,7 @@ export default async function InvoicesListPage(
               key={s}
               href={`/admin/invoices?status=${s}`}
               active={statusFilter === s && typeFilter === null}
-              label={`${statusLabels[s].text} · ${countMap[s] ?? 0}`}
+              label={`${labelOf(s)} · ${countMap[s] ?? 0}`}
             />
           ),
         )}
@@ -131,6 +154,14 @@ export default async function InvoicesListPage(
           active={typeFilter === "receipt"}
           label="Receipts"
         />
+        <span className="flex-1" />
+        <Link
+          href="/admin/invoices/archive"
+          className="text-sm text-zinc-600 hover:text-black border rounded-full px-3 py-1 hover:bg-zinc-50"
+          title="Archived invoices are hidden from this list"
+        >
+          🗄 Archive · {archivedCount}
+        </Link>
       </div>
 
       <form className="flex gap-2" action="/admin/invoices">
@@ -169,94 +200,11 @@ export default async function InvoicesListPage(
         )}
       </form>
 
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-zinc-600">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium">No.</th>
-              <th className="text-left px-4 py-3 font-medium">Date</th>
-              <th className="text-left px-4 py-3 font-medium">Title</th>
-              <th className="text-left px-4 py-3 font-medium">Company</th>
-              <th className="text-left px-4 py-3 font-medium">Counterparty</th>
-              <th className="text-right px-4 py-3 font-medium">Amount</th>
-              <th className="text-left px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-zinc-500">
-                  {q ? "Nothing found." : "No invoices."}
-                </td>
-              </tr>
-            ) : (
-              invoices.map((inv) => {
-                // "{project} {unit}" — same string used as the PDF filename.
-                // Empty string fine; the cell falls back to a dash.
-                const first = inv.items[0];
-                const title = [first?.projectName, first?.unitCode]
-                  .map((s) => s?.trim())
-                  .filter((s): s is string => !!s)
-                  .join(" ");
-                return (
-                <tr key={inv.id} className="border-t hover:bg-zinc-50/50">
-                  <td className="px-4 py-3 font-mono text-xs">
-                    <Link
-                      href={`/admin/invoices/${inv.id}`}
-                      className="hover:underline"
-                    >
-                      {inv.number ?? (
-                        <span className="text-zinc-400">
-                          draft/{inv.id.slice(0, 8)}
-                        </span>
-                      )}
-                    </Link>
-                    {inv.type === "receipt" && (
-                      <span className="ml-2 text-[10px] bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded">
-                        receipt
-                      </span>
-                    )}
-                    {inv.receipts.length > 0 && (
-                      <span className="ml-2 text-[10px] bg-green-50 text-green-800 px-1.5 py-0.5 rounded">
-                        +R
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-600">
-                    {inv.issueDate.toISOString().slice(0, 10)}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-700 max-w-xs truncate" title={title}>
-                    {title || <span className="text-zinc-400">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-700">
-                    {inv.ourCompany.name}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-700">
-                    {inv.counterparty.name}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {Number(inv.total).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    <span className="text-zinc-400 text-xs">
-                      {inv.primaryCurrency}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded ${statusLabels[inv.status].cls}`}
-                    >
-                      {statusLabels[inv.status].text}
-                    </span>
-                  </td>
-                </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <BulkInvoiceTable
+        rows={rows}
+        view="default"
+        emptyMessage={q ? "Nothing found." : "No invoices."}
+      />
 
       {invoices.length === 100 && (
         <p className="text-xs text-zinc-500">
@@ -265,6 +213,19 @@ export default async function InvoicesListPage(
       )}
     </div>
   );
+}
+
+function labelOf(s: InvoiceStatus): string {
+  switch (s) {
+    case "draft":
+      return "Draft";
+    case "issued":
+      return "Issued";
+    case "paid":
+      return "Paid";
+    case "cancelled":
+      return "Cancelled";
+  }
 }
 
 function FilterChip({

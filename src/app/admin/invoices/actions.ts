@@ -707,6 +707,183 @@ export async function deleteDraftInvoice(id: string) {
   redirect("/admin/invoices?deleted=1");
 }
 
+// ─────────────────────── Bulk archive / delete ───────────────────────
+
+// Bulk-результат: показывается в UI как «Archived 4, skipped 1» и т.п.
+type BulkResult = {
+  ok: boolean;
+  affected: number;
+  skipped: number;
+  errors?: string[];
+};
+
+// Удалить набор драфтов одним вызовом. Не-драфты молча пропускаются — UI
+// уже фильтрует список так, что пользователь должен видеть только драфты,
+// но защита остаётся на случай гонок (издали в другой вкладке).
+export async function bulkDeleteDrafts(ids: string[]): Promise<BulkResult> {
+  const session = await requireAdminAccess();
+  if (ids.length === 0) return { ok: true, affected: 0, skipped: 0 };
+
+  const targets = await prisma.invoice.findMany({
+    where: { id: { in: ids }, status: "draft", type: "invoice" },
+    select: { id: true },
+  });
+  const allowed = new Set(targets.map((t) => t.id));
+
+  let affected = 0;
+  for (const id of ids) {
+    if (!allowed.has(id)) continue;
+    try {
+      await prisma.invoice.delete({ where: { id } });
+      await writeAudit({
+        userId: session.user.id,
+        entity: "invoice",
+        entityId: id,
+        action: "delete",
+        diff: { after: { bulk: true } },
+      });
+      affected++;
+    } catch (err) {
+      // Skip rows that vanished mid-batch; report counts at the end.
+      console.error("[bulkDeleteDrafts]", id, err);
+    }
+  }
+
+  revalidatePath("/admin/invoices");
+  return { ok: true, affected, skipped: ids.length - affected };
+}
+
+// Положить выпущенные/оплаченные/отменённые инвойсы в архив. Драфты
+// архивации не подлежат — их следует удалять напрямую через bulkDeleteDrafts.
+export async function bulkArchiveInvoices(ids: string[]): Promise<BulkResult> {
+  const session = await requireAdminAccess();
+  if (ids.length === 0) return { ok: true, affected: 0, skipped: 0 };
+
+  // Берём только не-драфты и не-уже-архивированные.
+  const targets = await prisma.invoice.findMany({
+    where: {
+      id: { in: ids },
+      status: { in: ["issued", "paid", "cancelled"] },
+      archivedAt: null,
+    },
+    select: { id: true },
+  });
+  if (targets.length === 0) {
+    return { ok: true, affected: 0, skipped: ids.length };
+  }
+
+  const now = new Date();
+  const result = await prisma.invoice.updateMany({
+    where: { id: { in: targets.map((t) => t.id) } },
+    data: { archivedAt: now, archivedById: session.user.id },
+  });
+
+  // Один общий audit-лог на батч — иначе при больших пачках лог вспухнет.
+  await writeAudit({
+    userId: session.user.id,
+    entity: "invoice",
+    entityId: null,
+    action: "update",
+    diff: { after: { archived: targets.map((t) => t.id) } },
+  });
+
+  revalidatePath("/admin/invoices");
+  revalidatePath("/admin/invoices/archive");
+  return {
+    ok: true,
+    affected: result.count,
+    skipped: ids.length - result.count,
+  };
+}
+
+// Восстановить из архива (снимает archivedAt). Поведение идемпотентное:
+// уже не архивные пропускаются.
+export async function bulkRestoreInvoices(ids: string[]): Promise<BulkResult> {
+  const session = await requireAdminAccess();
+  if (ids.length === 0) return { ok: true, affected: 0, skipped: 0 };
+
+  const result = await prisma.invoice.updateMany({
+    where: { id: { in: ids }, archivedAt: { not: null } },
+    data: { archivedAt: null, archivedById: null },
+  });
+
+  await writeAudit({
+    userId: session.user.id,
+    entity: "invoice",
+    entityId: null,
+    action: "update",
+    diff: { after: { restored: ids.slice(0, result.count) } },
+  });
+
+  revalidatePath("/admin/invoices");
+  revalidatePath("/admin/invoices/archive");
+  return {
+    ok: true,
+    affected: result.count,
+    skipped: ids.length - result.count,
+  };
+}
+
+// Окончательное удаление архивных инвойсов. Вызывается ТОЛЬКО из архива,
+// клиент должен показать `confirm()` перед вызовом. Удаляет позиции и сам
+// инвойс. Если у инвойса есть связанные receipt'ы — пропускаем (нужно
+// отдельно удалить их сначала).
+export async function bulkPermanentlyDeleteInvoices(
+  ids: string[],
+): Promise<BulkResult> {
+  const session = await requireAdminAccess();
+  if (ids.length === 0) return { ok: true, affected: 0, skipped: 0 };
+
+  // Берём только архивные. Драфты сюда попасть не должны (у них archivedAt
+  // всегда null), но фильтр всё равно оставляем — устраняет случай, когда
+  // драфт пытаются удалить через "permanent" путь.
+  const targets = await prisma.invoice.findMany({
+    where: { id: { in: ids }, archivedAt: { not: null } },
+    select: {
+      id: true,
+      number: true,
+      receipts: { select: { id: true } },
+      parentInvoiceId: true,
+    },
+  });
+
+  let affected = 0;
+  const errors: string[] = [];
+  for (const t of targets) {
+    if (t.receipts.length > 0) {
+      errors.push(
+        `${t.number ?? t.id}: has ${t.receipts.length} linked receipt(s) — delete those first`,
+      );
+      continue;
+    }
+    try {
+      await prisma.$transaction([
+        prisma.invoiceItem.deleteMany({ where: { invoiceId: t.id } }),
+        prisma.invoice.delete({ where: { id: t.id } }),
+      ]);
+      await writeAudit({
+        userId: session.user.id,
+        entity: "invoice",
+        entityId: t.id,
+        action: "delete",
+        diff: { after: { permanent: true, number: t.number } },
+      });
+      affected++;
+    } catch (err) {
+      errors.push(`${t.number ?? t.id}: ${err instanceof Error ? err.message : "unknown"}`);
+    }
+  }
+
+  revalidatePath("/admin/invoices");
+  revalidatePath("/admin/invoices/archive");
+  return {
+    ok: true,
+    affected,
+    skipped: ids.length - affected,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
 // ────────────────────────────── Duplicate ──────────────────────────────
 
 export async function duplicateInvoice(id: string): Promise<Result> {

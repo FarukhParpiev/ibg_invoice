@@ -38,11 +38,13 @@ model User {
   sessions Session[]
 
   // Business relations
-  createdInvoices   Invoice[]  @relation("CreatedBy")
-  issuedInvoices    Invoice[]  @relation("IssuedBy")
-  paidInvoices      Invoice[]  @relation("PaidBy")
-  cancelledInvoices Invoice[]  @relation("CancelledBy")
-  auditLogs         AuditLog[]
+  createdInvoices      Invoice[]     @relation("CreatedBy")
+  issuedInvoices       Invoice[]     @relation("IssuedBy")
+  paidInvoices         Invoice[]     @relation("PaidBy")
+  cancelledInvoices    Invoice[]     @relation("CancelledBy")
+  archivedInvoices     Invoice[]     @relation("ArchivedBy")
+  authoredInstructions Instruction[] @relation("AuthoredBy")
+  auditLogs            AuditLog[]
 
   @@map("users")
 }
@@ -95,8 +97,8 @@ model VerificationToken {
 // ─────────────────────────────────────────────────────────────
 
 enum LegalType {
-  resident  // Таиланд, платим тайские налоги
-  offshore  // UK, UAE и прочие
+  resident // Таиланд, платим тайские налоги
+  offshore // UK, UAE и прочие
 }
 
 enum Currency {
@@ -189,11 +191,11 @@ model Counterparty {
 // ─────────────────────────────────────────────────────────────
 
 model PaymentTerms {
-  id        String    @id @default(cuid())
-  code      String    @unique // BANK_TRANSFER, SWIFT_TRANSFER, CRYPTO_TRANSFER
-  label     String
-  isActive  Boolean   @default(true)
-  invoices  Invoice[]
+  id       String    @id @default(cuid())
+  code     String    @unique // BANK_TRANSFER, SWIFT_TRANSFER, CRYPTO_TRANSFER
+  label    String
+  isActive Boolean   @default(true)
+  invoices Invoice[]
 
   @@map("payment_terms")
 }
@@ -208,14 +210,14 @@ enum InvoiceType {
 }
 
 enum InvoiceTemplate {
-  ibg_thb         // Info IBG / Invoice IBG
-  ib_group_thb    // Info IB Group / Invoice IB Group
-  ib_group_usd    // Info USD / Invoice USD
-  wise_thb        // Info Wise THB / Invoice Wise THB
-  crypto          // Info crypto / Invoice crypto
-  ibg_kas         // BLANK IBG Kas (cash variant)
-  others_thai     // @deprecated — removed from UI options, kept in enum for schema compatibility
-  blank           // Fully manual — user picks company, bank, and currency; PDF uses neutral layout
+  ibg_thb // Info IBG / Invoice IBG
+  ib_group_thb // Info IB Group / Invoice IB Group
+  ib_group_usd // Info USD / Invoice USD
+  wise_thb // Info Wise THB / Invoice Wise THB
+  crypto // Info crypto / Invoice crypto
+  ibg_kas // BLANK IBG Kas (cash variant)
+  others_thai // @deprecated — removed from UI options, kept in enum for schema compatibility
+  blank // Fully manual — user picks company, bank, and currency; PDF uses neutral layout
 }
 
 enum InvoiceStatus {
@@ -237,7 +239,7 @@ enum ItemType {
 }
 
 model Invoice {
-  id   String @id @default(cuid())
+  id String @id @default(cuid())
 
   // Сквозной номер по всей системе. Формат ДД/ММ/ГГГГ-NNNN
   // Для receipt: «NNNN-R» (суффикс -R к номеру родителя).
@@ -254,16 +256,16 @@ model Invoice {
   // автоматически — следующие инвойсы продолжат обычный инкремент.
   numberOverride String?
 
-  type             InvoiceType     @default(invoice)
-  parentInvoiceId  String?         // для receipt — ссылка на оплаченный инвойс
-  parentInvoice    Invoice?        @relation("InvoiceReceipt", fields: [parentInvoiceId], references: [id])
-  receipts         Invoice[]       @relation("InvoiceReceipt")
+  type            InvoiceType @default(invoice)
+  parentInvoiceId String? // для receipt — ссылка на оплаченный инвойс
+  parentInvoice   Invoice?    @relation("InvoiceReceipt", fields: [parentInvoiceId], references: [id])
+  receipts        Invoice[]   @relation("InvoiceReceipt")
 
   template InvoiceTemplate
   status   InvoiceStatus   @default(draft)
 
-  primaryCurrency     Currency @default(THB)
-  showUsdEquivalent   Boolean  @default(false)
+  primaryCurrency   Currency @default(THB)
+  showUsdEquivalent Boolean  @default(false)
 
   // Курс фиксируется при issuance и не меняется
   exchangeRate       Decimal?            @db.Decimal(18, 6)
@@ -275,27 +277,35 @@ model Invoice {
   otherDate DateTime?
 
   // Оплата
-  paidAt DateTime?
-  paidBy String?
-  paidByUser User? @relation("PaidBy", fields: [paidBy], references: [id])
+  paidAt     DateTime?
+  paidBy     String?
+  paidByUser User?     @relation("PaidBy", fields: [paidBy], references: [id])
 
   // Отмена
-  cancelledAt      DateTime?
-  cancelledBy      String?
-  cancelledReason  String?   @db.Text
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelledReason String?   @db.Text
+
+  // Архив. Полная замена soft-delete: архивные инвойсы скрыты из основного
+  // списка /admin/invoices и появляются только в /admin/invoices/archive,
+  // откуда можно восстановить или удалить навсегда. Драфты архивации не
+  // подлежат — для них сразу доступно прямое удаление.
+  archivedAt   DateTime?
+  archivedById String?
+  archivedBy   User?     @relation("ArchivedBy", fields: [archivedById], references: [id])
 
   // Реквизиты
-  paymentTermsId    String?
-  paymentTerms      PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
+  paymentTermsId String?
+  paymentTerms   PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
 
-  ourCompanyId      String
-  ourCompany        Company @relation(fields: [ourCompanyId], references: [id])
+  ourCompanyId String
+  ourCompany   Company @relation(fields: [ourCompanyId], references: [id])
 
-  ourBankAccountId  String
-  ourBankAccount    BankAccount @relation(fields: [ourBankAccountId], references: [id])
+  ourBankAccountId String
+  ourBankAccount   BankAccount @relation(fields: [ourBankAccountId], references: [id])
 
-  counterpartyId    String
-  counterparty      Counterparty @relation(fields: [counterpartyId], references: [id])
+  counterpartyId String
+  counterparty   Counterparty @relation(fields: [counterpartyId], references: [id])
 
   // Налоги
   vatApplied  Boolean @default(false) // 7%
@@ -303,10 +313,10 @@ model Invoice {
   whtApplied  Boolean @default(false) // 3% withholding (на pre-VAT базу)
 
   // Суммы (в primary currency)
-  subtotal   Decimal @db.Decimal(18, 2) @default(0)
-  vatAmount  Decimal @db.Decimal(18, 2) @default(0)
-  whtAmount  Decimal @db.Decimal(18, 2) @default(0)
-  total      Decimal @db.Decimal(18, 2) @default(0)
+  subtotal  Decimal @default(0) @db.Decimal(18, 2)
+  vatAmount Decimal @default(0) @db.Decimal(18, 2)
+  whtAmount Decimal @default(0) @db.Decimal(18, 2)
+  total     Decimal @default(0) @db.Decimal(18, 2)
 
   // Эквивалент в USD (если showUsdEquivalent = true)
   subtotalUsd Decimal? @db.Decimal(18, 2)
@@ -315,15 +325,15 @@ model Invoice {
   notesText String? @db.Text
 
   // PDF
-  pdfUrl       String?
-  pdfVersions  Json?   // [{url, generatedAt, by}]
+  pdfUrl      String?
+  pdfVersions Json? // [{url, generatedAt, by}]
 
   // Аудит
-  createdById String
-  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
-  issuedById  String?
-  issuedBy    User?  @relation("IssuedBy", fields: [issuedById], references: [id])
-  cancelledByUser User? @relation("CancelledBy", fields: [cancelledBy], references: [id])
+  createdById     String
+  createdBy       User    @relation("CreatedBy", fields: [createdById], references: [id])
+  issuedById      String?
+  issuedBy        User?   @relation("IssuedBy", fields: [issuedById], references: [id])
+  cancelledByUser User?   @relation("CancelledBy", fields: [cancelledBy], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -337,13 +347,39 @@ model Invoice {
   @@index([ourCompanyId, issueDate])
   @@index([parentInvoiceId])
   @@index([type, status])
+  @@index([archivedAt])
   @@map("invoices")
 }
 
+// ─────────────────────────────────────────────────────────────
+// Инструкции / FAQ для админ-панели
+// ─────────────────────────────────────────────────────────────
+
+// Внутренняя база знаний: подсказки и how-to для администраторов и обычных
+// юзеров. Контент в Markdown (с поддержкой картинок), редактирование — только
+// под super_admin. Картинки заливаются в публичный Vercel Blob и встраиваются
+// в Markdown по URL.
+model Instruction {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  bodyMd    String   @db.Text
+  // Сортировка списка в /admin/instructions. Меньше — выше.
+  position  Int      @default(0)
+  // Кто последним правил — для пометки в UI. NULL для seed-данных.
+  authorId  String?
+  author    User?    @relation("AuthoredBy", fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([position])
+  @@map("instructions")
+}
+
 model InvoiceItem {
-  id         String @id @default(cuid())
-  invoiceId  String
-  invoice    Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   positionNo Int
   itemType   ItemType
@@ -353,10 +389,10 @@ model InvoiceItem {
   unitCode    String?
 
   // Commission = (sellingPrice + sellingPriceCorrection) * commissionPercent + commissionCorrection
-  sellingPrice            Decimal? @db.Decimal(18, 2)
-  commissionPercent       Decimal? @db.Decimal(6, 3) // 1.000 = 1%
-  sellingPriceCorrection  Decimal? @db.Decimal(18, 2)
-  commissionCorrection    Decimal? @db.Decimal(18, 2)
+  sellingPrice           Decimal? @db.Decimal(18, 2)
+  commissionPercent      Decimal? @db.Decimal(6, 3) // 1.000 = 1%
+  sellingPriceCorrection Decimal? @db.Decimal(18, 2)
+  commissionCorrection   Decimal? @db.Decimal(18, 2)
 
   // Bonus = bonusAmount (в отдельной позиции)
   bonusAmount Decimal? @db.Decimal(18, 2)
@@ -365,15 +401,15 @@ model InvoiceItem {
   // комментарий — в note, сумма — в otherAmount.
   otherAmount Decimal? @db.Decimal(18, 2)
 
-  amount Decimal @db.Decimal(18, 2) @default(0) // итог по строке
+  amount Decimal @default(0) @db.Decimal(18, 2) // итог по строке
 
-  note   String? @db.Text
+  note String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([invoiceId])
   @@unique([invoiceId, positionNo])
+  @@index([invoiceId])
   @@map("invoice_items")
 }
 
@@ -393,18 +429,18 @@ enum AuditAction {
 }
 
 model AuditLog {
-  id        String      @id @default(cuid())
-  userId    String?
-  user      User?       @relation(fields: [userId], references: [id])
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
 
-  entity    String      // invoice, company, counterparty, user, ...
-  entityId  String?
+  entity   String // invoice, company, counterparty, user, ...
+  entityId String?
 
-  action    AuditAction
-  diff      Json?       // { before: {...}, after: {...} }
+  action AuditAction
+  diff   Json? // { before: {...}, after: {...} }
 
   ip        String?
-  userAgent String?   @db.Text
+  userAgent String? @db.Text
 
   createdAt DateTime @default(now())
 
@@ -419,12 +455,12 @@ model AuditLog {
 // ─────────────────────────────────────────────────────────────
 
 model ExchangeRateCache {
-  id       String   @id @default(cuid())
+  id           String             @id @default(cuid())
   fromCurrency Currency
   toCurrency   Currency
-  rate     Decimal  @db.Decimal(18, 6)
-  source   ExchangeRateSource @default(wise)
-  fetchedAt DateTime @default(now())
+  rate         Decimal            @db.Decimal(18, 6)
+  source       ExchangeRateSource @default(wise)
+  fetchedAt    DateTime           @default(now())
 
   @@index([fromCurrency, toCurrency, fetchedAt])
   @@map("exchange_rate_cache")

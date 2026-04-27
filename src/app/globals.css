@@ -24,3 +24,53 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Markdown article styling for /admin/instructions. We don't pull in
+   @tailwindcss/typography just for this — a small custom block keeps the
+   bundle lean and the look matches the rest of the admin panel. */
+.instruction-body { line-height: 1.55; }
+.instruction-body h1 { font-size: 1.4rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+.instruction-body h2 { font-size: 1.2rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+.instruction-body h3 { font-size: 1.05rem; font-weight: 600; margin: 0.75rem 0 0.4rem; }
+.instruction-body p { margin: 0.5rem 0; }
+.instruction-body ul,
+.instruction-body ol { margin: 0.5rem 0 0.5rem 1.4rem; }
+.instruction-body ul { list-style: disc; }
+.instruction-body ol { list-style: decimal; }
+.instruction-body li { margin: 0.2rem 0; }
+.instruction-body code {
+  background: #f4f4f5;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+}
+.instruction-body pre {
+  background: #18181b;
+  color: #f4f4f5;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.instruction-body pre code { background: transparent; padding: 0; color: inherit; }
+.instruction-body blockquote {
+  border-left: 3px solid #d4d4d8;
+  padding: 0.25rem 0.75rem;
+  color: #52525b;
+  margin: 0.5rem 0;
+}
+.instruction-body img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid #e4e4e7;
+  margin: 0.75rem 0;
+}
+.instruction-body a { color: #2563eb; text-decoration: underline; }
+.instruction-body table { border-collapse: collapse; margin: 0.75rem 0; }
+.instruction-body th,
+.instruction-body td {
+  border: 1px solid #e4e4e7;
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+}
+.instruction-body th { background: #fafafa; font-weight: 600; }
