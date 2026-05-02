@@ -76,6 +76,20 @@ export function InvoiceActions({
     );
   }
 
+  // The "Edit" button is now available on every status (drafts, issued,
+  // paid, cancelled). For non-drafts the form shows a yellow warning banner
+  // and a save will regenerate the PDF + linked receipt PDFs. Receipts
+  // themselves are excluded above and never see this branch.
+  const editButton = (
+    <button
+      onClick={() => router.push(`/admin/invoices/${id}/edit`)}
+      disabled={pending}
+      className="border rounded px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-40"
+    >
+      Edit
+    </button>
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
@@ -88,13 +102,7 @@ export function InvoiceActions({
             >
               Issue
             </button>
-            <button
-              onClick={() => router.push(`/admin/invoices/${id}/edit`)}
-              disabled={pending}
-              className="border rounded px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-40"
-            >
-              Edit
-            </button>
+            {editButton}
             <button
               onClick={handleDelete}
               disabled={pending}
@@ -114,6 +122,7 @@ export function InvoiceActions({
             >
               Mark as paid (+ receipt)
             </button>
+            {editButton}
             <button
               onClick={handleCancel}
               disabled={pending}
@@ -125,12 +134,20 @@ export function InvoiceActions({
         )}
 
         {status === "paid" && (
-          <div className="text-sm text-zinc-600">
-            Invoice is paid. No further changes allowed.
-          </div>
+          <>
+            {editButton}
+            <span className="text-sm text-zinc-600 self-center">
+              Invoice is paid. The linked receipt re-renders with each save.
+            </span>
+          </>
         )}
         {status === "cancelled" && (
-          <div className="text-sm text-zinc-600">Invoice cancelled.</div>
+          <>
+            {editButton}
+            <span className="text-sm text-zinc-600 self-center">
+              Invoice is cancelled. PDF keeps its CANCELLED stamp.
+            </span>
+          </>
         )}
       </div>
 

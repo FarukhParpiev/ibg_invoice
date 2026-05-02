@@ -14,7 +14,17 @@ import {
 } from "../counterparties/actions";
 import { calcTotals } from "@/lib/invoice-calc";
 
-type Mode = { kind: "create" } | { kind: "edit"; id: string };
+// Editing status — only meaningful for `kind: "edit"`. Drives the look &
+// behaviour of the number-override section (and any other status-aware UI):
+//   · "draft"        — pristine form: number is auto-allocated at issuance
+//   · "issued" / "paid" / "cancelled" — post-publication edit: the field
+//     becomes "Invoice number" (no "override"), seeded with the actual
+//     issued number, and a yellow warning banner is shown above the form.
+type EditingStatus = "draft" | "issued" | "paid" | "cancelled";
+
+type Mode =
+  | { kind: "create" }
+  | { kind: "edit"; id: string; status?: EditingStatus };
 
 export type InvoiceFormCompany = {
   id: string;
@@ -184,6 +194,13 @@ export function InvoiceForm({
     { kind: "ok" | "error"; text: string } | null
   >(null);
 
+  // True when we're editing an invoice that has already been published
+  // (issued, paid or cancelled). Used to swap labels and surface a warning
+  // banner — the form behaviour itself is unchanged, but the user is told
+  // that a save will regenerate the PDF (and any linked receipt).
+  const isPostPublication =
+    mode.kind === "edit" && !!mode.status && mode.status !== "draft";
+
   const form = useForm<InvoiceFormValues>({
     defaultValues: defaults ?? emptyDefaults,
   });
@@ -328,6 +345,19 @@ export function InvoiceForm({
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-6"
     >
+      {isPostPublication && (
+        <div className="border border-amber-300 bg-amber-50 text-amber-900 rounded-lg px-4 py-3 text-sm">
+          <div className="font-medium">
+            You are editing a {mode.kind === "edit" ? mode.status : ""} invoice
+          </div>
+          <div className="mt-1 text-amber-800">
+            Saving will overwrite the data on this invoice and regenerate its
+            PDF. Any linked receipt PDFs will also be re-rendered. The original
+            invoice number, exchange rate and audit trail are preserved.
+          </div>
+        </div>
+      )}
+
       {/* ───── Details ───── */}
       <section className="border rounded-lg p-5 bg-white space-y-4">
         <h2 className="font-medium">Details</h2>
@@ -816,21 +846,32 @@ export function InvoiceForm({
         )}
       </section>
 
-      {/* ───── Advanced (rarely used) ───── */}
+      {/* ───── Advanced (rarely used) ─────
+          The same input field carries two different meanings depending on
+          where in the lifecycle this invoice sits:
+            · draft       → "override the auto-allocated number at issuance"
+            · non-draft   → "edit the invoice number directly" (writes to
+                            Invoice.number on save). */}
       <section className="border rounded-lg p-5 bg-white space-y-3">
-        <details>
+        <details open={isPostPublication}>
           <summary className="text-sm text-zinc-600 cursor-pointer select-none hover:text-zinc-900">
-            Advanced: override invoice number
+            {isPostPublication
+              ? "Invoice number"
+              : "Advanced: override invoice number"}
           </summary>
           <div className="mt-3 grid grid-cols-2 gap-4">
             <Field
-              label="Full invoice number (optional)"
+              label={
+                isPostPublication
+                  ? "Invoice number"
+                  : "Full invoice number (optional)"
+              }
               error={formState.errors.numberOverride?.message as string | undefined}
             >
               {/* Free-form text so the user can paste any format they need
                   — e.g. legacy "23/04/2026-0001" when migrating from an
                   external system. The unique index on Invoice.number still
-                  guards against collisions at issuance time. */}
+                  guards against collisions. */}
               <input
                 type="text"
                 className="input"
@@ -839,9 +880,9 @@ export function InvoiceForm({
               />
             </Field>
             <div className="self-end text-xs text-zinc-500 pb-2">
-              Used verbatim when this draft is issued. Leave blank to use the
-              default DD/MM/YYYY-NNNN format — next invoices keep auto-
-              incrementing regardless.
+              {isPostPublication
+                ? "Editing this changes the number on the invoice itself. The auto-incrementing serial keeps marching forward independently."
+                : "Used verbatim when this draft is issued. Leave blank to use the default DD/MM/YYYY-NNNN format — next invoices keep auto-incrementing regardless."}
             </div>
           </div>
         </details>

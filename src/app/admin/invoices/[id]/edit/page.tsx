@@ -31,9 +31,15 @@ export default async function EditInvoicePage(
   ]);
 
   if (!invoice) notFound();
-  if (invoice.status !== "draft") {
-    redirect(`/admin/invoices/${id}?error=notDraft`);
+  // Receipts are derivative artefacts — they're regenerated automatically
+  // when their parent invoice changes, never edited directly.
+  if (invoice.type === "receipt") {
+    redirect(`/admin/invoices/${id}?error=receiptNotEditable`);
   }
+  // Drafts and post-publication invoices (issued / paid / cancelled) are
+  // both editable. The form behaves slightly differently for each — see
+  // `isPostPublication` inside InvoiceForm.
+  const isDraft = invoice.status === "draft";
 
   const ctx: InvoiceFormContext = {
     companies: companies.map((c) => ({
@@ -72,7 +78,12 @@ export default async function EditInvoicePage(
     vatIncluded: invoice.vatIncluded,
     whtApplied: invoice.whtApplied,
     notesText: invoice.notesText ?? "",
-    numberOverride: invoice.numberOverride ?? "",
+    // Repurpose the same form field for two flows:
+    //  · draft     → the planned-but-not-yet-applied numberOverride
+    //  · non-draft → the actual current invoice number, edited in place
+    numberOverride: isDraft
+      ? (invoice.numberOverride ?? "")
+      : (invoice.number ?? ""),
     items: invoice.items.map((it) => {
       if (it.itemType === "commission") {
         return {
@@ -105,6 +116,14 @@ export default async function EditInvoicePage(
     }),
   };
 
+  const heading = isDraft
+    ? "Edit draft"
+    : invoice.status === "issued"
+      ? `Edit issued invoice ${invoice.number ?? ""}`.trim()
+      : invoice.status === "paid"
+        ? `Edit paid invoice ${invoice.number ?? ""}`.trim()
+        : `Edit cancelled invoice ${invoice.number ?? ""}`.trim();
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
@@ -114,11 +133,11 @@ export default async function EditInvoicePage(
         >
           ← Back to invoice
         </Link>
-        <h1 className="text-2xl font-semibold mt-2">Edit draft</h1>
+        <h1 className="text-2xl font-semibold mt-2">{heading}</h1>
       </div>
 
       <InvoiceForm
-        mode={{ kind: "edit", id: invoice.id }}
+        mode={{ kind: "edit", id: invoice.id, status: invoice.status }}
         defaults={defaults}
         ctx={ctx}
       />

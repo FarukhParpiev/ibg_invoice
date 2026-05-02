@@ -337,11 +337,21 @@ export async function updateDraftInvoice(
   }
   const v = parsed.data;
 
-  const existing = await prisma.invoice.findUnique({ where: { id } });
+  const existing = await prisma.invoice.findUnique({
+    where: { id },
+    include: { receipts: { select: { id: true } } },
+  });
   if (!existing) return { ok: false, error: "Invoice not found" };
-  if (existing.status !== "draft") {
-    return { ok: false, error: "Only draft invoices can be edited" };
+  // Receipts are derived from a paid invoice — they can never be edited
+  // directly, only re-generated when the parent changes.
+  if (existing.type === "receipt") {
+    return { ok: false, error: "A receipt cannot be edited directly" };
   }
+  // Drafts edit freely. Issued/paid/cancelled invoices are also editable now,
+  // but the changes are post-publication: PDF is regenerated, audit is
+  // appended, and (if the invoice was paid) the linked receipt is also
+  // regenerated to reflect the new totals.
+  const isDraft = existing.status === "draft";
 
   const bank = await prisma.bankAccount.findUnique({
     where: { id: v.ourBankAccountId },
@@ -376,13 +386,26 @@ export async function updateDraftInvoice(
     convertThbToUsd,
   });
 
+  // Number handling differs by status:
+  //  · drafts: the field on the form is "numberOverride" — a *future* number
+  //    that issueInvoice() will pick up. The real `number` is still null.
+  //  · non-drafts: the invoice already has a `number`. The same form field is
+  //    re-purposed to display/edit that real number directly. We treat an
+  //    empty string as "leave alone" to avoid accidentally wiping it.
+  const trimmedOverride = v.numberOverride?.trim() ?? "";
+  const numberFieldUpdate = isDraft
+    ? { numberOverride: trimmedOverride || null }
+    : trimmedOverride && trimmedOverride !== existing.number
+      ? { number: trimmedOverride }
+      : {};
+
   await prisma.$transaction(async (tx) => {
     await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
     await tx.invoice.update({
       where: { id },
       data: {
         template: v.template,
-        numberOverride: v.numberOverride ?? null,
+        ...numberFieldUpdate,
         primaryCurrency,
         showUsdEquivalent,
         exchangeRate: toDecimalOrNull(v.exchangeRate ?? null),
@@ -423,8 +446,37 @@ export async function updateDraftInvoice(
     entity: "invoice",
     entityId: id,
     action: "update",
-    diff: { after: { template: v.template, total: totals.total } },
+    diff: {
+      after: {
+        template: v.template,
+        total: totals.total,
+        editedAfterIssue: !isDraft,
+      },
+    },
   });
+
+  // Post-publication edits regenerate the rendered PDFs so the file the
+  // user shares always reflects current data. Best-effort: failures are
+  // logged but don't block the save.
+  if (!isDraft && existing.pdfUrl) {
+    try {
+      await regenerateInvoicePdf(id, session.user.id);
+    } catch (err) {
+      console.error("[updateDraftInvoice] PDF regen failed", err);
+    }
+    // A paid invoice has at least one receipt — re-render those too so the
+    // amounts on the receipt PDF stay in sync with the parent.
+    if (existing.status === "paid" && existing.receipts.length > 0) {
+      for (const r of existing.receipts) {
+        try {
+          await regenerateInvoicePdf(r.id, session.user.id);
+        } catch (err) {
+          console.error("[updateDraftInvoice] receipt PDF regen failed", err);
+        }
+        revalidatePath(`/admin/invoices/${r.id}`);
+      }
+    }
+  }
 
   revalidatePath("/admin/invoices");
   revalidatePath(`/admin/invoices/${id}`);
