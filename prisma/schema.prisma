@@ -328,6 +328,16 @@ model Invoice {
   pdfUrl      String?
   pdfVersions Json? // [{url, generatedAt, by}]
 
+  // Google Drive disaster-recovery backup. Set after a successful background
+  // upload to the Drive folder shared with our Service Account. Both fields
+  // are nullable — Drive backup is optional and the invoice flow keeps
+  // working even when GOOGLE_SERVICE_ACCOUNT_KEY / GOOGLE_DRIVE_FOLDER_ID
+  // are not set.
+  driveFileId       String?
+  driveFolderId     String? // year/month subfolder this file lives in
+  driveUploadedAt   DateTime?
+  driveWebViewLink  String? // human-clickable link to the file on Drive
+
   // Аудит
   createdById     String
   createdBy       User    @relation("CreatedBy", fields: [createdById], references: [id])

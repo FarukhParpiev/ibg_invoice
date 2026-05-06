@@ -137,6 +137,34 @@ export default async function InvoiceDetailPage(
       <div className="border rounded-lg p-4 bg-white space-y-3">
         <div className="text-xs uppercase tracking-wide text-zinc-500">PDF</div>
         <PdfActions invoiceId={invoice.id} pdfUrl={invoice.pdfUrl} />
+        {invoice.driveWebViewLink && (
+          <div className="pt-2 border-t text-sm flex items-center gap-2 text-zinc-600">
+            <span className="text-emerald-600">●</span>
+            <span>
+              Backed up to Google Drive
+              {invoice.driveUploadedAt && (
+                <span className="text-zinc-400">
+                  {" · "}
+                  {new Date(invoice.driveUploadedAt).toLocaleString("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+            </span>
+            <a
+              href={invoice.driveWebViewLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto underline text-zinc-700 hover:text-black"
+            >
+              Open in Drive →
+            </a>
+          </div>
+        )}
         {invoice.type === "invoice" && (
           <div className="pt-2 border-t">
             <DuplicateButton invoiceId={invoice.id} />

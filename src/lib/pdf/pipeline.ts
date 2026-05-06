@@ -1,10 +1,12 @@
 // Glues everything together: loads the invoice from the DB, renders HTML → PDF,
 // uploads to Vercel Blob, writes pdfUrl and pdfVersions back to the DB.
+// Also fires off a background copy to Google Drive (best-effort backup).
 
 import { prisma } from "@/lib/prisma";
 import { renderInvoiceHtml, type InvoicePdfData } from "./template";
 import { renderHtmlToPdf } from "./generate";
 import { uploadInvoicePdf } from "./blob";
+import { syncInvoiceToDriveInBackground } from "@/lib/drive/sync";
 
 export type PdfVersion = {
   url: string;
@@ -56,6 +58,12 @@ export async function regenerateInvoicePdf(
       pdfVersions: [...prev, version] as unknown as object,
     },
   });
+
+  // Mirror the same buffer to Google Drive in the background. We hand the
+  // function the in-memory PDF directly to skip an extra round-trip back
+  // through Vercel Blob. Any failure is logged and otherwise swallowed —
+  // Drive is a backup, not a gate on the user-visible flow.
+  syncInvoiceToDriveInBackground(invoiceId, pdf);
 
   return { url: uploaded.url, size: uploaded.size };
 }

@@ -896,6 +896,7 @@ export async function bulkPermanentlyDeleteInvoices(
       number: true,
       receipts: { select: { id: true } },
       parentInvoiceId: true,
+      driveFileId: true,
     },
   });
 
@@ -913,6 +914,20 @@ export async function bulkPermanentlyDeleteInvoices(
         prisma.invoiceItem.deleteMany({ where: { invoiceId: t.id } }),
         prisma.invoice.delete({ where: { id: t.id } }),
       ]);
+      // Best-effort: also remove the Drive backup. The DB row is already
+      // gone — if Drive deletion fails we just log and move on, the file
+      // becomes a harmless orphan.
+      if (t.driveFileId) {
+        try {
+          const { deleteFromDrive } = await import("@/lib/drive/upload");
+          await deleteFromDrive(t.driveFileId);
+        } catch (err) {
+          console.warn(
+            `[bulkPermanentlyDeleteInvoices] drive delete failed for ${t.id}`,
+            err,
+          );
+        }
+      }
       await writeAudit({
         userId: session.user.id,
         entity: "invoice",
