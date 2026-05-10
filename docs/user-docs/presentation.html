@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IBG Invoice — Your Quick Guide</title>
+<style>
+  @page { size: 13.33in 7.5in; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; padding: 0; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #0F1B2D; background: #fff; }
+  .slide {
+    width: 13.3in;
+    height: 7.45in;
+    padding: 0.55in 0.65in 0.95in 0.65in;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  /* Color tokens — Midnight Executive */
+  :root {
+    --navy:      #1E2761;
+    --navy-deep: #0F1B2D;
+    --ice:       #CADCFC;
+    --ice-soft:  #E8EFFB;
+    --accent:    #FF8A5B;
+    --accent-2:  #5BC0BE;
+    --ink:       #0F1B2D;
+    --ink-muted: #5B6478;
+    --rule:      #D8DEEA;
+    --paper:     #FFFFFF;
+  }
+
+  /* Typography */
+  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; margin: 0; line-height: 1.15; }
+  h1 { font-size: 56pt; font-weight: 700; }
+  h2 { font-size: 36pt; font-weight: 700; }
+  h3 { font-size: 20pt; font-weight: 700; }
+  p, li { font-size: 16pt; line-height: 1.45; margin: 0; }
+  small { font-size: 11pt; color: var(--ink-muted); }
+  .eyebrow { font-size: 10pt; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 12pt; }
+
+  /* Page chrome */
+  .footer {
+    position: absolute; bottom: 0.3in; left: 0.65in; right: 0.65in;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--ink-muted); font-size: 9pt; letter-spacing: 0.08em; text-transform: uppercase;
+    border-top: 1px solid var(--rule); padding-top: 8pt;
+  }
+  .footer .brand { font-weight: 700; color: var(--navy); }
+
+  /* Cover */
+  .cover { background: var(--navy-deep); color: #fff; }
+  .cover h1 { font-size: 70pt; color: #fff; max-width: 9in; }
+  .cover .eyebrow { color: var(--accent); }
+  .cover p.lede { font-size: 18pt; max-width: 8in; margin-top: 18pt; color: var(--ice); font-family: Georgia, serif; font-style: italic; }
+  .cover .badge { position: absolute; top: 0.7in; right: 0.7in; padding: 8pt 16pt; border: 1px solid var(--ice); border-radius: 999px; color: var(--ice); font-size: 10pt; letter-spacing: 0.2em; }
+  .cover .footer { color: rgba(202,220,252,0.7); border-top-color: rgba(202,220,252,0.25); }
+  .cover .footer .brand { color: #fff; }
+  .cover .glow { position: absolute; right: -2in; bottom: -2in; width: 9in; height: 9in; border-radius: 50%; background: radial-gradient(circle, rgba(255,138,91,0.35), transparent 60%); }
+  .cover .glow2 { position: absolute; left: -2in; top: -2in; width: 8in; height: 8in; border-radius: 50%; background: radial-gradient(circle, rgba(91,192,190,0.18), transparent 65%); }
+
+  /* Two-column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6in; height: calc(100% - 0.7in); }
+  .one-col { max-width: 11in; }
+
+  /* Cards */
+  .card {
+    background: var(--ice-soft);
+    border-radius: 16pt;
+    padding: 22pt 24pt;
+  }
+  .card .num { font-family: Georgia, serif; font-size: 40pt; font-weight: 700; color: var(--navy); line-height: 1; }
+  .card h3 { margin-top: 6pt; }
+  .card p { margin-top: 8pt; color: var(--ink-muted); font-size: 14pt; }
+
+  .card.dark { background: var(--navy); color: #fff; }
+  .card.dark h3 { color: #fff; }
+  .card.dark .num { color: var(--accent); }
+  .card.dark p { color: var(--ice); }
+
+  /* Icon + title row (used for "what can it do") */
+  .row {
+    display: flex; align-items: flex-start; gap: 18pt;
+    padding: 18pt 0; border-bottom: 1px solid var(--rule);
+  }
+  .row:last-child { border-bottom: none; }
+  .icon-circle {
+    flex: 0 0 auto;
+    width: 56pt; height: 56pt; border-radius: 50%;
+    background: var(--navy); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26pt; font-weight: 700; font-family: Georgia, serif;
+  }
+  .icon-circle.accent { background: var(--accent); }
+  .icon-circle.teal { background: var(--accent-2); }
+  .row .text { flex: 1; }
+  .row .text h3 { margin-bottom: 4pt; }
+  .row .text p { color: var(--ink-muted); font-size: 14pt; }
+
+  /* Lifecycle pipeline */
+  .pipeline {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14pt;
+    margin-top: 20pt;
+  }
+  .stage {
+    background: var(--paper);
+    border: 2pt solid var(--navy);
+    border-radius: 14pt;
+    padding: 18pt 16pt;
+    position: relative;
+  }
+  .stage .pill {
+    display: inline-block;
+    background: var(--navy); color: #fff;
+    border-radius: 999px;
+    padding: 4pt 12pt; font-size: 9pt; letter-spacing: 0.16em; font-weight: 700;
+    margin-bottom: 12pt;
+  }
+  .stage h3 { font-size: 18pt; }
+  .stage p { font-size: 12pt; color: var(--ink-muted); margin-top: 6pt; }
+  .stage.optional { border-style: dashed; }
+  .stage.optional .pill { background: #5B6478; }
+
+  /* Stat callout */
+  .stat {
+    background: var(--navy);
+    color: #fff;
+    border-radius: 16pt;
+    padding: 28pt;
+    text-align: center;
+  }
+  .stat .big { font-family: Georgia, serif; font-size: 76pt; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat p { color: var(--ice); margin-top: 12pt; font-size: 14pt; }
+
+  /* Sidebar tour image (CSS-only rendering of the actual sidebar) */
+  .sidebar-mock {
+    width: 4.6in;
+    background: #fff;
+    border: 1.5pt solid var(--rule);
+    border-radius: 12pt;
+    padding: 16pt 14pt;
+    box-shadow: 0 6pt 18pt rgba(15,27,45,0.06);
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+  }
+  .sidebar-mock .item { padding: 5pt 8pt !important; font-size: 10.5pt !important; }
+  .sidebar-mock .group-title { padding: 9pt 8pt 3pt !important; }
+  .sidebar-mock .logo { display: flex; align-items: center; gap: 10pt; padding-bottom: 14pt; border-bottom: 1pt solid var(--rule); margin-bottom: 14pt; }
+  .sidebar-mock .logo .sq { width: 28pt; height: 28pt; background: var(--navy); border-radius: 6pt; display: inline-block; color: #fff; text-align: center; font-weight: 700; font-size: 14pt; line-height: 28pt; font-family: Georgia, serif; }
+  .sidebar-mock .logo .name { font-size: 13pt; font-weight: 700; color: var(--navy); }
+  .sidebar-mock .item { display: flex; align-items: center; gap: 10pt; padding: 7pt 8pt; border-radius: 6pt; font-size: 11pt; color: var(--ink); }
+  .sidebar-mock .item .ic { width: 18pt; text-align: center; color: var(--ink-muted); }
+  .sidebar-mock .item.active { background: var(--ice-soft); color: var(--navy); font-weight: 700; }
+  .sidebar-mock .group-title { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-muted); padding: 12pt 8pt 4pt; }
+
+  /* Steps list */
+  .steps li {
+    margin-bottom: 12pt; padding-left: 14pt; position: relative;
+    font-size: 16pt;
+  }
+  .steps li::marker { color: var(--accent); font-weight: 700; }
+  .steps b { color: var(--navy); }
+
+  /* Helpful highlight */
+  .tip {
+    background: #FFF6EE;
+    border-left: 4pt solid var(--accent);
+    padding: 14pt 16pt; border-radius: 0 10pt 10pt 0;
+    margin-top: 18pt; font-size: 13pt; color: var(--ink);
+  }
+  .tip b { color: var(--accent); }
+
+  /* Closing slide */
+  .closing { background: var(--navy-deep); color: #fff; display: flex; flex-direction: column; justify-content: center; }
+  .closing h2 { color: #fff; font-size: 56pt; max-width: 10in; }
+  .closing p { color: var(--ice); font-size: 18pt; max-width: 9in; margin-top: 16pt; }
+  .closing .footer { color: rgba(202,220,252,0.7); border-top-color: rgba(202,220,252,0.25); }
+  .closing .footer .brand { color: #fff; }
+
+  /* Section title strip on content slides */
+  .header { display: flex; align-items: baseline; gap: 18pt; margin-bottom: 18pt; }
+  .header .num { font-family: Georgia, serif; color: var(--ice); font-size: 56pt; font-weight: 700; line-height: 1; }
+  .header .title { font-family: Georgia, serif; font-size: 30pt; font-weight: 700; color: var(--navy); }
+
+  /* Two column: image-style left, text right */
+  .visual-card {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #fff;
+    border-radius: 16pt;
+    padding: 28pt;
+    height: 100%;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .visual-card .blob { position: absolute; right: -1.2in; top: -1.2in; width: 4in; height: 4in; border-radius: 50%; background: rgba(255,138,91,0.25); }
+  .visual-card .blob2 { position: absolute; left: -0.8in; bottom: -0.8in; width: 3in; height: 3in; border-radius: 50%; background: rgba(91,192,190,0.18); }
+  .visual-card h3 { color: #fff; font-size: 28pt; max-width: 4.6in; }
+  .visual-card p { color: var(--ice); margin-top: 12pt; font-size: 14pt; }
+  .visual-card .stamp {
+    margin-top: 22pt;
+    display: inline-block;
+    border: 2pt dashed var(--ice);
+    border-radius: 8pt;
+    padding: 8pt 14pt;
+    font-family: Georgia, serif; font-size: 14pt; color: var(--ice); font-style: italic;
+    align-self: flex-start;
+  }
+
+  /* Pair of equal cards */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22pt; }
+
+  /* Definition list */
+  dl.terms { margin: 0; }
+  dl.terms dt { font-weight: 700; color: var(--navy); font-size: 15pt; margin-top: 14pt; }
+  dl.terms dt:first-child { margin-top: 0; }
+  dl.terms dd { margin: 4pt 0 0; color: var(--ink-muted); font-size: 13pt; }
+
+</style>
+</head>
+<body>
+
+<!-- ─────────────────────── 1. Cover ─────────────────────── -->
+<section class="slide cover">
+  <div class="glow"></div>
+  <div class="glow2"></div>
+  <div class="badge">For new users</div>
+  <div style="margin-top: 1.3in;">
+    <div class="eyebrow">IBG Invoice — Quick Tour</div>
+    <h1>The invoice app,<br/>in plain English.</h1>
+    <p class="lede">Everything you need to make, send, and track invoices — explained the easy way.</p>
+  </div>
+  <div class="footer">
+    <span class="brand">IBG Invoice</span>
+    <span>Slide 1 / 13</span>
+  </div>
+</section>
+
+<!-- ─────────────────────── 2. What is this thing? ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">01</span>
+    <span class="title">What is this app?</span>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="eyebrow">In one sentence</div>
+      <h2 style="font-size: 30pt;">It's how we make pretty PDF invoices — and remember who paid us.</h2>
+      <p style="margin-top: 18pt; color: var(--ink-muted); font-size: 14pt;">Before this app, people made invoices by hand in Word, saved them in folders, and tried to remember the numbers. Things got lost.</p>
+      <p style="margin-top: 12pt; color: var(--ink-muted); font-size: 14pt;">Now the app does the boring parts (numbering, math, PDF design) and you just fill in the names and amounts.</p>
+    </div>
+    <div class="visual-card">
+      <div class="blob"></div>
+      <div class="blob2"></div>
+      <div class="eyebrow" style="color: var(--accent);">Think of it as</div>
+      <h3>A smart notebook<br/>that prints itself.</h3>
+      <p>You write what you sold. It writes the invoice and stamps it with the right number.</p>
+      <span class="stamp">Invoice 23/04/2026-0001</span>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 2 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 3. What can it do? ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">02</span>
+    <span class="title">What can it do for you?</span>
+  </div>
+  <div style="max-width: 11in;">
+    <div class="row">
+      <div class="icon-circle">1</div>
+      <div class="text">
+        <h3>Make invoices</h3>
+        <p>Pick a client, add what you sold, and the app builds a clean PDF with our logo and bank details.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="icon-circle accent">2</div>
+      <div class="text">
+        <h3>Track who paid</h3>
+        <p>When the money arrives, you click "Mark as paid". The app remembers the date forever.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="icon-circle teal">3</div>
+      <div class="text">
+        <h3>Print receipts automatically</h3>
+        <p>The second you mark an invoice paid, the app makes a matching receipt PDF. You don't lift a finger.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="icon-circle">4</div>
+      <div class="text">
+        <h3>Keep a perfect copy on Google Drive</h3>
+        <p>Every PDF is also saved to a backup folder on Drive. So even if something breaks, the files are safe.</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 3 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 4. Roles ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">03</span>
+    <span class="title">Two kinds of people use the app</span>
+  </div>
+  <div class="pair">
+    <div class="card">
+      <div class="num">👤</div>
+      <h3 style="margin-top: 8pt;">User</h3>
+      <p style="margin-top: 12pt;">That's most people. You can do all the day-to-day work: make invoices, mark them paid, add clients, look things up.</p>
+      <p style="margin-top: 10pt; color: var(--navy); font-weight: 700;">Think of it like a teacher in a school.</p>
+    </div>
+    <div class="card dark">
+      <div class="num">⚙</div>
+      <h3 style="margin-top: 8pt;">Super admin</h3>
+      <p style="margin-top: 12pt;">Same powers as a User, plus the boring back-office stuff: add new companies, set up bank accounts, create new user accounts, edit the help articles.</p>
+      <p style="margin-top: 10pt; color: var(--accent); font-weight: 700;">Like the school principal.</p>
+    </div>
+  </div>
+  <div class="tip" style="max-width: 11in;"><b>You probably are:</b> a User. If you ever need a button that's missing, ask a Super admin.</div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 4 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 5. Lifecycle ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">04</span>
+    <span class="title">The life of an invoice</span>
+  </div>
+  <p style="max-width: 11in; color: var(--ink-muted); margin-bottom: 8pt;">Every invoice goes through these stages. Most stop at "Paid" — that's the happy ending.</p>
+  <div class="pipeline">
+    <div class="stage">
+      <span class="pill">Step 1</span>
+      <h3>Draft</h3>
+      <p>You wrote it but didn't send it yet. Free to edit. No number yet.</p>
+    </div>
+    <div class="stage">
+      <span class="pill">Step 2</span>
+      <h3>Issued</h3>
+      <p>Locked in. Has a real number. PDF ready to send to the client.</p>
+    </div>
+    <div class="stage">
+      <span class="pill">Step 3</span>
+      <h3>Paid 🎉</h3>
+      <p>Money arrived. The app makes a receipt automatically.</p>
+    </div>
+    <div class="stage optional">
+      <span class="pill">Optional</span>
+      <h3>Cancelled</h3>
+      <p>Something went wrong. The PDF gets a red "CANCELLED" stamp.</p>
+    </div>
+  </div>
+  <div class="tip" style="max-width: 11in;"><b>Why "Draft"?</b> So you can fix typos before the invoice gets a real number. Once it's "Issued", the number is set in stone — that's how accounting stays tidy.</div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 5 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 6. How to make one ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">05</span>
+    <span class="title">How to make a new invoice</span>
+  </div>
+  <div class="two-col">
+    <div>
+      <ol class="steps">
+        <li>Click <b>Invoices</b> on the left, then <b>+ New invoice</b> top-right.</li>
+        <li>Pick a <b>template</b> — that fills in our company and bank for you.</li>
+        <li>Pick the <b>client</b>. Don't see them? Click <b>+ Quick add</b>.</li>
+        <li>Set the <b>issue date</b>. Due date fills itself in (5 days later).</li>
+        <li>Add what you sold — usually one line is enough.</li>
+        <li>Click <b>Save draft</b>. Done.</li>
+      </ol>
+    </div>
+    <div class="visual-card">
+      <div class="blob"></div>
+      <div class="blob2"></div>
+      <div class="eyebrow" style="color: var(--accent);">Remember</div>
+      <h3>A draft is just a sketch.</h3>
+      <p>Nothing is sent, nothing is final. You can come back tomorrow and finish it. The number only gets stamped on when you click "Issue".</p>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 6 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 7. Templates ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">06</span>
+    <span class="title">Templates — pick the right "stamp"</span>
+  </div>
+  <div class="two-col">
+    <div>
+      <p style="color: var(--ink-muted);">A template is just a shortcut. It says: "Use <i>this</i> company, <i>this</i> bank account, and <i>this</i> currency."</p>
+      <p style="color: var(--ink-muted); margin-top: 14pt;">We have nine templates because we have nine companies. Pick the one your client should pay into.</p>
+      <dl class="terms" style="margin-top: 22pt;">
+        <dt>IBG THB</dt>
+        <dd>Most common. Thai company, paid in Thai baht.</dd>
+        <dt>IB Group USD</dt>
+        <dd>Offshore company, paid in dollars.</dd>
+        <dt>Wise / Crypto / IBG Kas</dt>
+        <dd>Special cases — only use if you know the client wants this.</dd>
+        <dt>Blank</dt>
+        <dd>Pick everything yourself. Use only if nothing else fits.</dd>
+      </dl>
+    </div>
+    <div class="visual-card">
+      <div class="blob"></div>
+      <div class="blob2"></div>
+      <div class="eyebrow" style="color: var(--accent);">Just like at school</div>
+      <h3>Don't sweat the choice.</h3>
+      <p>Templates are like worksheet headers your teacher pre-fills. You can still change anything below — they just save typing.</p>
+      <span class="stamp">Most days you'll just pick "IBG THB"</span>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 7 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 8. Counterparty ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">07</span>
+    <span class="title">Adding a client (we call them "counterparty")</span>
+  </div>
+  <div class="pair">
+    <div class="card">
+      <h3>Quick way</h3>
+      <p style="color: var(--ink-muted); margin-top: 10pt;">Inside the invoice form, click <b>+ Quick add</b> next to the client picker.</p>
+      <p style="color: var(--ink-muted); margin-top: 10pt;">Type their name (Tax ID and address are optional — fill in later).</p>
+      <p style="color: var(--ink-muted); margin-top: 10pt;">Save → they're picked for this invoice and saved for next time.</p>
+    </div>
+    <div class="card dark">
+      <h3>Full way</h3>
+      <p style="margin-top: 10pt;">Use this when you have time and want to add full details (email, language preference, notes).</p>
+      <p style="margin-top: 10pt;">Click <b>Counterparties</b> on the left → <b>+ New counterparty</b> → fill in the form.</p>
+      <p style="margin-top: 10pt; color: var(--accent);">Tip: <b>Preferred language</b> decides if their PDF comes out in English or Thai.</p>
+    </div>
+  </div>
+  <div class="tip" style="max-width: 11in;"><b>Already in the list?</b> Always pick the existing one. Never create a duplicate — accounting has to merge them later by hand.</div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 8 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 9. Issue ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">08</span>
+    <span class="title">Issuing — making it real</span>
+  </div>
+  <div class="two-col">
+    <div>
+      <p style="font-size: 18pt;">When the invoice is ready to send, open it and click the big black <b style="color: var(--navy);">Issue</b> button.</p>
+      <p style="color: var(--ink-muted); margin-top: 16pt;">Five things happen at once:</p>
+      <ol class="steps" style="margin-top: 10pt;">
+        <li>The next number is stamped on (e.g. <b>23/04/2026-0001</b>).</li>
+        <li>Today's exchange rate is locked in (if needed).</li>
+        <li>A polished PDF appears.</li>
+        <li>The PDF is also saved to <b>Google Drive backup</b>.</li>
+        <li>Status changes from "Draft" to "Issued".</li>
+      </ol>
+    </div>
+    <div>
+      <div class="stat">
+        <div class="big">3 sec</div>
+        <p>Average time from clicking Issue to having a sendable PDF.</p>
+      </div>
+      <div class="tip" style="margin-top: 22pt;">
+        <b>Don't confuse "Generate PDF" with "Issue".</b><br/>
+        Generate PDF on a draft only makes a preview. Only <b>Issue</b> publishes the invoice with a real number.
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 9 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 10. Mark as paid ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">09</span>
+    <span class="title">Got paid? Click one button.</span>
+  </div>
+  <div class="two-col">
+    <div>
+      <p style="font-size: 18pt;">Open the issued invoice → click the green <b style="color:#1f8a4d;">Mark as paid (+ receipt)</b> button.</p>
+      <p style="color: var(--ink-muted); margin-top: 16pt;">It will ask for the <b>payment date</b> (default: today). After that:</p>
+      <ol class="steps" style="margin-top: 10pt;">
+        <li>The invoice flips to <b>Paid</b>.</li>
+        <li>A new <b>receipt</b> is born — same number plus "<b>-R</b>".</li>
+        <li>Both PDFs are made and backed up.</li>
+        <li>The receipt shows up under <b>Receipts</b> on the left.</li>
+      </ol>
+    </div>
+    <div class="visual-card">
+      <div class="blob"></div>
+      <div class="blob2"></div>
+      <div class="eyebrow" style="color: var(--accent);">Pinky promise</div>
+      <h3>You never write a receipt by hand.</h3>
+      <p>The app does it. Always. If you need to share the receipt link with the client, click <b>Copy public link</b> on the receipt page.</p>
+      <span class="stamp">23/04/2026-0001-R</span>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 10 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 11. Mistakes ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">10</span>
+    <span class="title">Made a mistake? Pick the right fix.</span>
+  </div>
+  <div class="pair">
+    <div class="card">
+      <h3>Wrong amount, typo, wrong line</h3>
+      <p style="color: var(--ink-muted); margin-top: 10pt;"><b>Edit</b> the invoice — yes, even after it's issued or paid. The PDF and receipt re-generate automatically.</p>
+      <p style="color: var(--ink-muted); margin-top: 10pt;">A yellow banner reminds you that the invoice is published.</p>
+    </div>
+    <div class="card">
+      <h3>Whole invoice was a mistake</h3>
+      <p style="color: var(--ink-muted); margin-top: 10pt;"><b>Cancel</b> it. The PDF gets a red "CANCELLED" stamp. The number is kept (accounting needs the trail).</p>
+      <p style="color: var(--ink-muted); margin-top: 10pt;">Already paid? You can't cancel — refund externally and make a new credit invoice.</p>
+    </div>
+    <div class="card">
+      <h3>Don't want it in the main list anymore</h3>
+      <p style="color: var(--ink-muted); margin-top: 10pt;"><b>Archive</b> it. Goes to <b>Archive</b> in the sidebar. You can restore any time.</p>
+    </div>
+    <div class="card dark">
+      <h3>It was just an unwanted draft</h3>
+      <p style="margin-top: 10pt;"><b>Delete</b> the draft. Drafts have no number, so deleting them leaves no trail. Issued invoices can never be deleted, only archived.</p>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 11 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 12. Sidebar tour ─────────────────────── -->
+<section class="slide">
+  <div class="header">
+    <span class="num">11</span>
+    <span class="title">Where to find things</span>
+  </div>
+  <div class="two-col">
+    <div class="sidebar-mock">
+      <div class="logo"><span class="sq">I</span><span class="name">IBG Invoice</span></div>
+      <div class="item"><span class="ic">◆</span><span>Dashboard</span></div>
+      <div class="item active"><span class="ic">▤</span><span>Invoices</span></div>
+      <div class="item"><span class="ic">🗄</span><span>Archive</span></div>
+      <div class="item"><span class="ic">✓</span><span>Receipts</span></div>
+      <div class="item"><span class="ic">♁</span><span>Counterparties</span></div>
+      <div class="item"><span class="ic">❔</span><span>Instructions</span></div>
+      <div class="group-title">Administration · Super admin only</div>
+      <div class="item"><span class="ic">⌂</span><span>Our companies</span></div>
+      <div class="item"><span class="ic">◉</span><span>Users</span></div>
+    </div>
+    <div>
+      <dl class="terms">
+        <dt>Dashboard</dt>
+        <dd>Snapshot of the day — totals, recent activity.</dd>
+        <dt>Invoices</dt>
+        <dd>The main list. Where you live most of the day.</dd>
+        <dt>Archive</dt>
+        <dd>Old invoices you tucked away. Restore from here.</dd>
+        <dt>Receipts</dt>
+        <dd>Auto-made receipts for paid invoices.</dd>
+        <dt>Counterparties</dt>
+        <dd>The client address book.</dd>
+        <dt>Instructions</dt>
+        <dd>The help articles. Read when you're stuck.</dd>
+        <dt>Our companies / Users</dt>
+        <dd>Super admin only. Don't worry about these.</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 12 / 13</span></div>
+</section>
+
+<!-- ─────────────────────── 13. Closing ─────────────────────── -->
+<section class="slide closing">
+  <div style="margin-bottom: 0.6in;">
+    <div class="eyebrow">You're ready</div>
+    <h2>That's the whole tour.</h2>
+    <p>Stuck? Click <b style="color: #fff;">Instructions</b> in the sidebar — there's a help article for almost every screen. Still stuck? Ask the team.</p>
+    <p style="margin-top: 22pt;">The app is forgiving: drafts can be deleted, mistakes can be edited, and every PDF is backed up to Google Drive. Don't be afraid to click around.</p>
+  </div>
+  <div class="footer"><span class="brand">IBG Invoice</span><span>Slide 13 / 13</span></div>
+</section>
+
+</body>
+</html>

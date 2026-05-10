@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IBG Invoice — FAQ for Users</title>
+<style>
+  @page { size: A4; margin: 0.7in 0.75in 1.05in 0.75in; }
+  @page :first { margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0; padding: 0; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #0F1B2D; background: #fff; }
+
+  :root {
+    --navy:      #1E2761;
+    --navy-deep: #0F1B2D;
+    --ice:       #CADCFC;
+    --ice-soft:  #E8EFFB;
+    --accent:    #FF8A5B;
+    --accent-2:  #5BC0BE;
+    --ink:       #0F1B2D;
+    --ink-muted: #5B6478;
+    --rule:      #D8DEEA;
+  }
+
+  /* Cover — full A4 page, no body margins. z-index puts it above the
+     position:fixed footer so the footer doesn't bleed through. */
+  .cover {
+    page-break-after: always;
+    width: 8.27in; min-height: 11.69in;
+    display: flex; flex-direction: column; justify-content: space-between;
+    background: linear-gradient(160deg, #0F1B2D 0%, #1E2761 100%);
+    color: #fff;
+    padding: 1.1in 0.95in;
+    position: relative;
+    overflow: hidden;
+    z-index: 100;
+  }
+  .cover .glow { position: absolute; right: -2in; top: -2in; width: 6in; height: 6in; border-radius: 50%; background: radial-gradient(circle, rgba(255,138,91,0.4), transparent 60%); }
+  .cover .glow2 { position: absolute; left: -1.5in; bottom: -1.5in; width: 5in; height: 5in; border-radius: 50%; background: radial-gradient(circle, rgba(91,192,190,0.25), transparent 65%); }
+  .cover .badge { display: inline-block; padding: 6pt 14pt; border: 1px solid var(--ice); border-radius: 999px; color: var(--ice); font-size: 9pt; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 36pt; }
+  .cover h1 { font-family: Georgia, serif; font-size: 56pt; font-weight: 700; line-height: 1.05; margin: 0; max-width: 6.2in; }
+  .cover h1 small { display: block; font-size: 28pt; color: var(--ice); font-style: italic; font-weight: 400; margin-top: 14pt; }
+  .cover p.lede { font-family: Georgia, serif; font-style: italic; font-size: 18pt; max-width: 5in; margin: 28pt 0 0; color: var(--ice); }
+  .cover .meta { color: rgba(202,220,252,0.75); font-size: 10pt; letter-spacing: 0.16em; text-transform: uppercase; }
+  .cover .meta b { color: #fff; font-weight: 700; }
+
+  /* Headings */
+  h2 {
+    font-family: Georgia, serif;
+    font-size: 26pt;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 36pt 0 4pt;
+    padding-top: 14pt;
+    border-top: 2pt solid var(--navy);
+  }
+  h2:first-of-type { margin-top: 0; }
+  .section-eyebrow {
+    font-size: 9pt; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700;
+    margin-bottom: 12pt;
+  }
+  h3 {
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 13.5pt;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 22pt 0 6pt;
+    line-height: 1.3;
+  }
+
+  /* Q/A blocks — keep each one on a single page */
+  .qa { margin-top: 18pt; padding-bottom: 14pt; border-bottom: 1pt solid var(--rule); break-inside: avoid; page-break-inside: avoid; }
+  .qa:last-child { border-bottom: none; }
+  h2 { break-after: avoid; page-break-after: avoid; }
+  h2 + .section-eyebrow { break-after: avoid; page-break-after: avoid; }
+  .toc { break-inside: avoid; page-break-inside: avoid; }
+  dl.glossary dt { break-after: avoid; page-break-after: avoid; }
+  dl.glossary dt + dd { break-before: avoid; page-break-before: avoid; }
+  .qa .q {
+    display: flex; align-items: flex-start; gap: 12pt;
+    margin-bottom: 8pt;
+  }
+  .qa .q .marker {
+    flex: 0 0 22pt; height: 22pt;
+    background: var(--navy); color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-weight: 700; font-size: 12pt;
+    margin-top: 1pt;
+  }
+  .qa .q h3 { margin: 0; padding: 0; font-size: 13pt; line-height: 1.35; flex: 1; }
+  .qa .a { padding-left: 34pt; }
+  .qa .a p { margin: 6pt 0; font-size: 11pt; line-height: 1.55; color: var(--ink); }
+  .qa .a p.muted { color: var(--ink-muted); font-size: 10pt; font-style: italic; }
+  .qa .a ul, .qa .a ol { margin: 6pt 0 6pt 16pt; padding: 0; }
+  .qa .a li { font-size: 11pt; line-height: 1.55; margin-bottom: 4pt; color: var(--ink); }
+
+  b { color: var(--navy); }
+  code {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10pt;
+    background: var(--ice-soft);
+    border-radius: 3pt;
+    padding: 1pt 5pt;
+    color: var(--navy-deep);
+  }
+
+  /* Callouts */
+  .callout {
+    background: #FFF6EE;
+    border-left: 4pt solid var(--accent);
+    padding: 12pt 16pt;
+    border-radius: 0 8pt 8pt 0;
+    margin: 14pt 0 0 34pt;
+    font-size: 10.5pt; line-height: 1.5;
+  }
+  .callout b { color: var(--accent); }
+
+  .danger {
+    background: #FEF1F1;
+    border-left-color: #C0392B;
+  }
+  .danger b { color: #C0392B; }
+
+  .info {
+    background: var(--ice-soft);
+    border-left-color: var(--navy);
+  }
+  .info b { color: var(--navy); }
+
+  /* Table of contents */
+  .toc {
+    background: var(--ice-soft);
+    border-radius: 12pt;
+    padding: 22pt 28pt;
+    margin: 0 0 24pt;
+  }
+  .toc h2 {
+    font-size: 16pt; margin: 0 0 14pt; padding: 0; border: none; color: var(--navy);
+  }
+  .toc ol { margin: 0; padding-left: 18pt; columns: 2; column-gap: 28pt; }
+  .toc li { margin-bottom: 6pt; font-size: 11pt; color: var(--ink); break-inside: avoid; }
+  .toc li b { color: var(--navy); }
+
+  /* Glossary */
+  dl.glossary { margin: 8pt 0 0; }
+  dl.glossary dt { font-weight: 700; color: var(--navy); font-size: 11.5pt; margin-top: 12pt; }
+  dl.glossary dt:first-child { margin-top: 0; }
+  dl.glossary dd { margin: 4pt 0 0; color: var(--ink); font-size: 10.5pt; line-height: 1.5; }
+
+  /* Page footer (running) */
+  /* CSS @page running headers/footers don't work cross-engine reliably,
+     so we fake it by repeating a <footer> element on each section page.
+     For this doc we keep it simple — Chrome's print-to-pdf will paginate
+     content automatically. */
+
+  /* "Last word" panel at the very end of the document */
+  .last-word {
+    margin-top: 36pt;
+    padding: 22pt 26pt;
+    background: var(--ice-soft);
+    border-radius: 12pt;
+    border-left: 4pt solid var(--accent);
+    break-inside: avoid;
+  }
+  .last-word h3 { margin: 0 0 8pt; font-size: 14pt; color: var(--navy); }
+  .last-word p { margin: 0; font-size: 11pt; color: var(--ink); line-height: 1.55; }
+
+  .lead {
+    font-size: 12pt;
+    line-height: 1.55;
+    color: var(--ink-muted);
+    margin: 8pt 0 0;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<!-- ────── Cover ────── -->
+<section class="cover">
+  <div class="glow"></div>
+  <div class="glow2"></div>
+  <div>
+    <span class="badge">FAQ · For users</span>
+    <h1>The IBG Invoice handbook<small>Frequently Asked Questions</small></h1>
+    <p class="lede">A friendly handbook for the people who actually use the app. No jargon, just plain answers.</p>
+  </div>
+  <div class="meta">
+    <span><b>IBG Invoice</b> · User documentation</span>
+  </div>
+</section>
+
+<!-- ────── TOC ────── -->
+<div class="toc">
+  <h2>What's inside</h2>
+  <ol>
+    <li><b>Getting started</b> — what the app is and what it isn't</li>
+    <li><b>Making invoices</b> — drafts, templates, line items</li>
+    <li><b>Issuing</b> — making an invoice "real"</li>
+    <li><b>Marking as paid + receipts</b></li>
+    <li><b>Editing &amp; fixing mistakes</b></li>
+    <li><b>Cancel · Archive · Delete</b></li>
+    <li><b>Clients (counterparties)</b></li>
+    <li><b>PDFs and sharing</b></li>
+    <li><b>Searching &amp; finding things</b></li>
+    <li><b>Google Drive backup</b></li>
+    <li><b>Things going wrong</b></li>
+    <li><b>Glossary</b> — every weird word, explained</li>
+  </ol>
+</div>
+
+<!-- ────── 1. Getting started ────── -->
+<h2>1 · Getting started</h2>
+<div class="section-eyebrow">The basics — read this first</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What is IBG Invoice, in one sentence?</h3></div>
+  <div class="a">
+    <p>It's the app that turns "we sold them a unit and now they need to pay" into a clean PDF invoice with a real number — and remembers it forever.</p>
+    <p class="muted">Before this app, people made invoices in Word, saved them in random folders, and tried to remember the numbers. This app does all that for you.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Who can use it?</h3></div>
+  <div class="a">
+    <p>Anyone with a login. There are two roles:</p>
+    <ul>
+      <li><b>User</b> — that's most people. You can make invoices, mark them paid, add clients, look things up. (Like a teacher.)</li>
+      <li><b>Super admin</b> — same as User plus the back-office stuff: add new companies, set up bank accounts, create new logins, edit help articles. (Like the school principal.)</li>
+    </ul>
+    <p class="muted">If you don't see a button this guide mentions, you're probably a User and that button is for Super admins. Ask one.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I log in?</h3></div>
+  <div class="a">
+    <p>Open the app's URL → enter your email and password. Done. There's no "Sign up" — Super admin makes accounts, then sends you the login.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I don't have a password yet — what do I do?</h3></div>
+  <div class="a">
+    <p>Ask a Super admin to create your account. They'll either send you the password or set it up so you can pick one on first login.</p>
+  </div>
+</div>
+
+<!-- ────── 2. Making invoices ────── -->
+<h2>2 · Making invoices</h2>
+<div class="section-eyebrow">Drafts, templates, and line items</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I make a new invoice?</h3></div>
+  <div class="a">
+    <ol>
+      <li>Click <b>Invoices</b> on the left sidebar.</li>
+      <li>Click <b>+ New invoice</b> in the top-right corner.</li>
+      <li>Pick a <b>template</b> (it auto-fills the company and bank for you).</li>
+      <li>Pick the <b>client</b> from the dropdown — or click <b>+ Quick add</b> if they're new.</li>
+      <li>Set the <b>issue date</b>. The due date fills itself in (5 days later).</li>
+      <li>Add at least one <b>line item</b> — usually one is enough.</li>
+      <li>Click <b>Save draft</b>.</li>
+    </ol>
+    <div class="callout"><b>Heads up:</b> A draft has <b>no number yet</b>. The number gets stamped on later, when you click <b>Issue</b>. That's so accounting numbers stay tidy.</div>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What's a "template" exactly?</h3></div>
+  <div class="a">
+    <p>A template is a shortcut. It says: "Use <b>this</b> company, <b>this</b> bank account, and <b>this</b> currency." Saves you typing the same info every time.</p>
+    <p>We have nine templates because we have nine companies. The most common one is <b>IBG THB</b>.</p>
+    <ul>
+      <li><b>IBG THB</b> · <b>IB Group THB</b> — Thai company, paid in baht.</li>
+      <li><b>IB Group USD</b> — offshore company, paid in dollars.</li>
+      <li><b>Wise THB</b> · <b>Crypto</b> · <b>IBG Kas</b> — special payment rails. Use only when you know.</li>
+      <li><b>Blank</b> — fully manual. Pick everything yourself.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What are "line items"?</h3></div>
+  <div class="a">
+    <p>Each line item is one row on the invoice — basically "what are you charging the client for". There are three flavours:</p>
+    <ul>
+      <li><b>Commission</b> — selling price × percent + corrections. Use this for most property deals.</li>
+      <li><b>Bonus</b> — flat amount. Use this for one-off bonuses.</li>
+      <li><b>Other</b> — free-form. Write what it's for in <b>Project</b> and the amount in <b>Other amount</b>.</li>
+    </ul>
+    <p class="muted">Most invoices have one line. Add more only if the same invoice covers multiple items.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What about VAT and WHT?</h3></div>
+  <div class="a">
+    <p>Two checkboxes on the form:</p>
+    <ul>
+      <li><b>VAT 7%</b> — turn on for Thai-resident invoices that need VAT. Pick "VAT included" if the price already includes VAT, or leave it off if VAT is added on top.</li>
+      <li><b>WHT 3%</b> — withholding tax. Turn on if the client withholds 3% from the payment.</li>
+    </ul>
+    <p class="muted">Not sure? Ask accounting. Don't guess — VAT settings affect what the client owes.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I save and finish later?</h3></div>
+  <div class="a">
+    <p>Yes. Click <b>Save draft</b> any time. Drafts live in the main list with a "draft" badge — open one and keep editing. Drafts never expire.</p>
+  </div>
+</div>
+
+<!-- ────── 3. Issuing ────── -->
+<h2>3 · Issuing — making it real</h2>
+<div class="section-eyebrow">Locking the number, freezing the rate</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What does "Issue" actually do?</h3></div>
+  <div class="a">
+    <p>Five things, all in one click:</p>
+    <ol>
+      <li>Stamps a real invoice number on it (e.g. <code>23/04/2026-0001</code>).</li>
+      <li>Locks today's exchange rate (only if the invoice converts currencies).</li>
+      <li>Generates a polished PDF.</li>
+      <li>Backs the PDF up to Google Drive.</li>
+      <li>Changes the status from "Draft" to "Issued".</li>
+    </ol>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Where's the "Issue" button?</h3></div>
+  <div class="a">
+    <p>Open any draft. There's a big black <b>Issue</b> button right under the totals.</p>
+    <div class="callout danger"><b>Don't confuse "Generate PDF" with "Issue".</b> Generate PDF on a draft just makes a preview file. Only <b>Issue</b> publishes the invoice with a real number you can send to a client.</div>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I pick the number myself instead of letting it auto-pick?</h3></div>
+  <div class="a">
+    <p>Yes. On the draft, scroll down to <b>Advanced</b> → fill in the <b>full invoice number</b> field with whatever format you want (e.g. <code>23/04/2026-0001</code>). When you click Issue, the app uses that number instead of auto-picking.</p>
+    <p class="muted">Useful when you're migrating an old invoice from another system. The auto-counter still ticks forward in the background, so future invoices stay sequential.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I clicked Issue and got a yellow note about "PDF generation failed". Now what?</h3></div>
+  <div class="a">
+    <p>The invoice <i>is</i> issued — that part worked. Only the PDF didn't render. Click the <b>Regenerate PDF</b> button on the invoice page to retry. Almost always works the second time.</p>
+  </div>
+</div>
+
+<!-- ────── 4. Marking as paid + receipts ────── -->
+<h2>4 · Marking as paid + receipts</h2>
+<div class="section-eyebrow">When the money actually arrives</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>The client paid. What do I do?</h3></div>
+  <div class="a">
+    <p>Open the issued invoice → click the green <b>Mark as paid (+ receipt)</b> button. The app asks for the payment date (defaults to today). After confirming:</p>
+    <ul>
+      <li>The invoice flips to <b>Paid</b>.</li>
+      <li>A new <b>receipt</b> is born — same number plus <code>-R</code> (e.g. <code>23/04/2026-0001-R</code>).</li>
+      <li>Both PDFs are made and backed up.</li>
+      <li>The receipt shows up under <b>Receipts</b> in the sidebar.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Do I need to make the receipt myself?</h3></div>
+  <div class="a">
+    <p>No, never. The app makes it for you the second you click <b>Mark as paid</b>. If you find yourself "making a receipt" by hand, you're doing it wrong — talk to a Super admin.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>The client paid yesterday, not today. Does the date matter?</h3></div>
+  <div class="a">
+    <p>Yes — pick the <b>actual</b> payment date when prompted. The receipt PDF will show that date. If you typed today by accident, just edit the invoice afterwards (see "Editing &amp; fixing mistakes").</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I send the receipt to the client?</h3></div>
+  <div class="a">
+    <p>Open the receipt → click <b>Copy public link</b>. Paste that link into your email or CRM. The link is permanent and unguessable — anyone with the link can open the PDF, no login needed.</p>
+  </div>
+</div>
+
+<!-- ────── 5. Editing ────── -->
+<h2>5 · Editing &amp; fixing mistakes</h2>
+<div class="section-eyebrow">Yes, you can fix issued invoices</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I edit an issued invoice?</h3></div>
+  <div class="a">
+    <p>Yes. Open the invoice → click <b>Edit</b>. A yellow banner reminds you it's already published. Make your change → <b>Save</b>. The PDF re-generates automatically. If the invoice was paid, the receipt PDF re-generates too.</p>
+    <p class="muted">The invoice number, exchange rate and full audit trail are preserved — they don't change.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I edit a paid invoice?</h3></div>
+  <div class="a">
+    <p>Yes — same as above. The receipt that came with it will re-render with the new amounts.</p>
+    <div class="callout"><b>Use this carefully on paid invoices.</b> If accounting already booked the original amount, you might need to tell them about the change. Editing fixes the file but doesn't tell anyone else.</div>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I edit a receipt directly?</h3></div>
+  <div class="a">
+    <p>No. Receipts always mirror their parent invoice. To change a receipt, edit the parent invoice — the receipt updates by itself.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I change the invoice number after issuing?</h3></div>
+  <div class="a">
+    <p>Yes. On the edit form, the field <b>Invoice number</b> shows the current number — type a new one and Save. The number on the PDF will change.</p>
+    <p class="muted">Don't do this lightly — accounting uses these numbers as references.</p>
+  </div>
+</div>
+
+<!-- ────── 6. Cancel / Archive / Delete ────── -->
+<h2>6 · Cancel · Archive · Delete</h2>
+<div class="section-eyebrow">Three different ways to "make it go away"</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What's the difference between Cancel, Archive and Delete?</h3></div>
+  <div class="a">
+    <ul>
+      <li><b>Cancel</b> — the invoice was a real mistake (wrong client, wrong deal). Stamps a red "CANCELLED" on the PDF. The number stays in the books — accounting needs the trail.</li>
+      <li><b>Archive</b> — the invoice is fine but old; you don't want it cluttering the main list. Goes to <b>Archive</b> in the sidebar. Restorable any time.</li>
+      <li><b>Delete</b> — only for <b>drafts</b>. Drafts have no number, so deleting them leaves no trace. Issued invoices can never be deleted, only archived.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I cancel an invoice?</h3></div>
+  <div class="a">
+    <p>Open the issued invoice → click <b>Cancel</b> → type a short reason (visible only inside our team). The PDF re-renders with a red "CANCELLED" stamp at the top.</p>
+    <div class="callout danger"><b>Paid invoices can't be cancelled.</b> If a paid invoice was wrong, refund the client externally and create a new "credit" invoice for the difference.</div>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I archive invoices?</h3></div>
+  <div class="a">
+    <ol>
+      <li>On the <b>Invoices</b> list, tick the checkbox of each row to archive.</li>
+      <li>Click <b>Archive</b> in the bar at the bottom.</li>
+      <li>They disappear from the main list and show up in <b>Archive</b> in the sidebar.</li>
+    </ol>
+    <p>Need them back? Open <b>Archive</b>, tick them, click <b>Restore</b>.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I bulk-delete drafts?</h3></div>
+  <div class="a">
+    <p>Yes. On the Invoices list, tick the drafts → <b>Delete drafts</b> at the bottom → confirm. They're gone forever.</p>
+    <div class="callout"><b>Only drafts.</b> The button is greyed out if you ticked anything that isn't a draft.</div>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What about "Delete permanently" in Archive?</h3></div>
+  <div class="a">
+    <p>That's the nuclear option. It really removes the row from the database. Use only when you're 100% sure — there's no undo. The app refuses to delete an invoice that still has linked receipts; archive (or delete) the receipt first.</p>
+  </div>
+</div>
+
+<!-- ────── 7. Counterparties ────── -->
+<h2>7 · Clients (counterparties)</h2>
+<div class="section-eyebrow">The address book of people who pay us</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Why "counterparty" instead of "client"?</h3></div>
+  <div class="a">
+    <p>Old accounting word — same thing. It just means "the other side of the deal". You'll see the word everywhere in the app.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I add a new client?</h3></div>
+  <div class="a">
+    <p>Two ways:</p>
+    <ul>
+      <li><b>Quick add</b> — inside the invoice form, click <b>+ Quick add</b>. Type their name (Tax ID and address are optional). Save. They're picked for this invoice and saved for next time.</li>
+      <li><b>Full form</b> — sidebar → <b>Counterparties</b> → <b>+ New counterparty</b>. Fill in everything (email, language, notes).</li>
+    </ul>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>What's "Preferred language" on a counterparty?</h3></div>
+  <div class="a">
+    <p>Decides if their invoice PDF comes out in English or Thai. Pick whichever the client reads. Doesn't change anything inside the app — only the printable PDF.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I made a duplicate client by accident — how do I clean up?</h3></div>
+  <div class="a">
+    <p>You can <b>Hide</b> the duplicate (Counterparties → click on the row → <b>Hide</b>). It vanishes from the picker but old invoices still work.</p>
+    <p class="muted">If both duplicates have invoices already, ask a Super admin — merging clients with invoice history is a manual job.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I delete a counterparty?</h3></div>
+  <div class="a">
+    <p>Only if they have no invoices. Otherwise, use <b>Hide</b>.</p>
+  </div>
+</div>
+
+<!-- ────── 8. PDFs ────── -->
+<h2>8 · PDFs and sharing</h2>
+<div class="section-eyebrow">How files come out and how to send them</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I get the PDF?</h3></div>
+  <div class="a">
+    <p>Open any issued/paid invoice → there's a <b>PDF</b> box near the top with two buttons:</p>
+    <ul>
+      <li><b>Copy public link</b> — gives you a permanent shareable URL. Best for emails and CRM.</li>
+      <li><b>Download PDF</b> — saves the file to your computer with a clean filename like <code>Sky Park A-205.pdf</code>.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Is the public link safe to share with clients?</h3></div>
+  <div class="a">
+    <p>Yes. The URL is unguessable (random characters), so nobody can find it without the link. But anyone with the link can open the PDF — don't post it publicly.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I print directly?</h3></div>
+  <div class="a">
+    <p>Yes. The PDF preview on the invoice page has a small <b>Print</b> button. Or download and print the file.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>The PDF looks ugly / something's missing. What now?</h3></div>
+  <div class="a">
+    <p>Click <b>Regenerate PDF</b> on the invoice page. Usually fixes the issue. If not, screenshot the problem and ping a Super admin.</p>
+  </div>
+</div>
+
+<!-- ────── 9. Searching ────── -->
+<h2>9 · Searching &amp; finding things</h2>
+<div class="section-eyebrow">Find any invoice in seconds</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I find a specific invoice?</h3></div>
+  <div class="a">
+    <p>On the <b>Invoices</b> list, type into the search box at the top. The app searches across:</p>
+    <ul>
+      <li>Invoice number (e.g. <code>23/04</code> finds all invoices from April 23)</li>
+      <li>Counterparty name</li>
+      <li>Our company name</li>
+      <li>Project name and unit code on line items</li>
+    </ul>
+    <p class="muted">Search is case-insensitive and matches partial words.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I see only drafts (or only paid invoices)?</h3></div>
+  <div class="a">
+    <p>Use the status chips above the table — <b>All · Draft · Issued · Paid · Cancelled</b>. They combine with search.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Can I bookmark a filtered view?</h3></div>
+  <div class="a">
+    <p>Yes — the filters are in the URL. <code>/admin/invoices?status=draft&amp;q=John</code> shows John's drafts. Bookmark it.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I'm looking at the Counterparties list and only see 50 — what about the rest?</h3></div>
+  <div class="a">
+    <p>It's paginated 50 per page. Use the <b>Prev / Next</b> buttons at the bottom. Or use search to jump to who you need.</p>
+  </div>
+</div>
+
+<!-- ────── 10. Drive backup ────── -->
+<h2>10 · Google Drive backup</h2>
+<div class="section-eyebrow">Your safety net</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Where else are my invoices stored besides the app?</h3></div>
+  <div class="a">
+    <p>Every PDF is automatically copied to a Google Drive folder called <b>Invoices Backup</b>. Folder structure is <code>Year / Month / file.pdf</code>. So if anything happens to the app, the files are still there.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How are the files named on Drive?</h3></div>
+  <div class="a">
+    <p>Like this: <code>23-04-2026-0001_John Smith Sky Park A-205.pdf</code>. Number first (slashes replaced with dashes), then client, project and unit. So you can find any file by searching for the client name, project name, or unit code in Drive.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Where do I see the link to the Drive copy?</h3></div>
+  <div class="a">
+    <p>On any backed-up invoice, the PDF box shows a green dot and <b>Open in Drive →</b>. Click it to open the file in Google Drive.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>Do I need to do anything to back things up?</h3></div>
+  <div class="a">
+    <p>No. The app does it for you the moment you Issue, Pay, Edit or Cancel.</p>
+  </div>
+</div>
+
+<!-- ────── 11. Things going wrong ────── -->
+<h2>11 · Things going wrong</h2>
+<div class="section-eyebrow">When the app misbehaves</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I clicked something and the page went blank.</h3></div>
+  <div class="a">
+    <p>Refresh (Cmd+R or Ctrl+R). 99% of the time it just loads again. If it keeps happening on the same page, screenshot the URL and tell a Super admin.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I see a red error message at the top.</h3></div>
+  <div class="a">
+    <p>Read it — usually it tells you what's wrong (e.g. "Bank account does not belong to the selected company"). Fix the form and try again. If the message is technical and confusing, screenshot it and ping a Super admin.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>The app is asking me to log in over and over.</h3></div>
+  <div class="a">
+    <p>Your session probably expired, or your browser's blocking cookies. Try a hard refresh (Cmd+Shift+R / Ctrl+Shift+R), or open the app in a new private window. If that fails, it's a Super admin issue.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I deleted a draft by accident.</h3></div>
+  <div class="a">
+    <p>Drafts can't be undeleted — they're gone for good. Re-create from scratch (or use <b>Duplicate</b> on a similar invoice if there is one).</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>I issued the wrong invoice — the number is gone now, right?</h3></div>
+  <div class="a">
+    <p>The number is yours forever. Cancel the invoice (it stays in the books with a "CANCELLED" stamp) and make a new one. Numbering keeps moving forward — the next invoice gets the next number.</p>
+  </div>
+</div>
+
+<div class="qa">
+  <div class="q"><span class="marker">?</span><h3>How do I get help?</h3></div>
+  <div class="a">
+    <p>Three places:</p>
+    <ol>
+      <li>Click <b>Instructions</b> in the sidebar — there's a help article for almost every screen.</li>
+      <li>Re-read this FAQ.</li>
+      <li>Ask a Super admin or the team.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ────── 12. Glossary ────── -->
+<h2>12 · Glossary</h2>
+<div class="section-eyebrow">Every weird word, in one place</div>
+
+<dl class="glossary">
+  <dt>Counterparty</dt>
+  <dd>The client. The other side of the deal. We use this word everywhere in the app.</dd>
+
+  <dt>Draft</dt>
+  <dd>An invoice you started but didn't publish yet. No number, fully editable, can be deleted.</dd>
+
+  <dt>Issued</dt>
+  <dd>An invoice that's been published. It has a real number and a polished PDF. Send it to the client.</dd>
+
+  <dt>Paid</dt>
+  <dd>An issued invoice that's been marked as received. Comes with a free receipt.</dd>
+
+  <dt>Cancelled</dt>
+  <dd>An issued invoice that you reversed. PDF gets a red "CANCELLED" stamp; number is kept.</dd>
+
+  <dt>Archived</dt>
+  <dd>An invoice you tucked away to keep the main list clean. Restorable any time.</dd>
+
+  <dt>Receipt</dt>
+  <dd>The "thank you, we got the money" PDF. Same number as the invoice plus <code>-R</code>. Made automatically when you mark an invoice paid.</dd>
+
+  <dt>Template</dt>
+  <dd>A shortcut that fills in our company, bank and currency for you. Pick the right one for each deal.</dd>
+
+  <dt>Issue date</dt>
+  <dd>The date on the invoice. Usually today.</dd>
+
+  <dt>Due date</dt>
+  <dd>By when the client should pay. Defaults to issue date + 5 days.</dd>
+
+  <dt>VAT</dt>
+  <dd>Value-Added Tax. 7% in Thailand. Turn on for resident companies that need to charge VAT.</dd>
+
+  <dt>WHT</dt>
+  <dd>Withholding tax. 3% in Thailand. Turn on if the client withholds it from their payment.</dd>
+
+  <dt>Bank account</dt>
+  <dd>One of our company's bank accounts (for the client to pay into). The template auto-picks the right one.</dd>
+
+  <dt>Super admin</dt>
+  <dd>An account with extra powers — manage companies, users, help articles. Most people are Users.</dd>
+
+  <dt>User</dt>
+  <dd>A regular login. Can do all day-to-day work but can't manage companies or other users.</dd>
+
+  <dt>Public link</dt>
+  <dd>A permanent unguessable URL to the PDF. Send to clients, paste in CRM. No login needed to open.</dd>
+
+  <dt>PDF backup</dt>
+  <dd>Every PDF is also saved to a Google Drive folder for safety. You don't need to do anything.</dd>
+
+  <dt>Bulk action</dt>
+  <dd>Doing the same thing to many invoices at once — tick checkboxes, pick the action at the bottom.</dd>
+</dl>
+
+<div class="last-word">
+  <h3>Still stuck?</h3>
+  <p>Click <b>Instructions</b> in the app's sidebar — there's a help article for almost every screen. Then come back to this FAQ. Then ask the team.</p>
+</div>
+
+</body>
+</html>
