@@ -30,11 +30,19 @@
 //   user pastes the canonical "23/04/2026-0001" form.
 
 import { Readable } from "node:stream";
+import type { Location } from "@prisma/client";
 import {
   driveRootFolderId,
   getDriveClient,
   isDriveConfigured,
 } from "./client";
+
+// Top-level Drive folder per location, so the backup mirrors the
+// Phuket/Pattaya split: <root>/Phuket/2026/05/… and <root>/Pattaya/2026/05/….
+const LOCATION_FOLDER_NAME: Record<Location, string> = {
+  phuket: "Phuket",
+  pattaya: "Pattaya",
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Folder cache
@@ -94,17 +102,23 @@ async function findOrCreateFolder(
   return id;
 }
 
-// Public: get (or create) the year/month folder for an issue date.
+// Public: get (or create) the location/year/month folder for an issue date.
 export async function ensureYearMonthFolder(
+  location: Location,
   issueDate: Date,
 ): Promise<string> {
   const root = driveRootFolderId();
   if (!root) throw new Error("GOOGLE_DRIVE_FOLDER_ID not set");
+  // Nest under the per-location folder first, then year/month inside it.
   // Local-time year/month would be ambiguous on a server timezone; use UTC
   // consistently so the same invoice always lands in the same folder.
+  const locationFolder = await findOrCreateFolder(
+    root,
+    LOCATION_FOLDER_NAME[location],
+  );
   const year = String(issueDate.getUTCFullYear());
   const month = String(issueDate.getUTCMonth() + 1).padStart(2, "0");
-  const yearFolder = await findOrCreateFolder(root, year);
+  const yearFolder = await findOrCreateFolder(locationFolder, year);
   const monthFolder = await findOrCreateFolder(yearFolder, month);
   return monthFolder;
 }
@@ -178,6 +192,8 @@ export type DriveUploadResult = {
 };
 
 export type DriveUploadInput = {
+  // Business location — picks the top-level Phuket/Pattaya folder.
+  location: Location;
   // Used for picking the year/month folder. Falls back to "now" if absent.
   issueDate: Date | null;
   filename: string;
@@ -196,7 +212,10 @@ export async function uploadInvoiceToDrive(
   const drive = getDriveClient();
   if (!drive) return null;
 
-  const folderId = await ensureYearMonthFolder(input.issueDate ?? new Date());
+  const folderId = await ensureYearMonthFolder(
+    input.location,
+    input.issueDate ?? new Date(),
+  );
 
   const media = {
     mimeType: "application/pdf",

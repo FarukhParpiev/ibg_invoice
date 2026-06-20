@@ -80,6 +80,7 @@ export async function syncInvoiceToDrive(
 
   try {
     const result = await uploadInvoiceToDrive({
+      location: inv.location,
       issueDate: inv.issueDate,
       filename,
       description,
