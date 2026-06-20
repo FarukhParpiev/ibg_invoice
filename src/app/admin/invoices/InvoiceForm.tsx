@@ -39,9 +39,21 @@ export type InvoiceFormCompany = {
   }>;
 };
 
+export type InvoiceLocation = "phuket" | "pattaya";
+
+export const LOCATION_LABEL: Record<InvoiceLocation, string> = {
+  phuket: "Phuket",
+  pattaya: "Pattaya",
+};
+
 export type InvoiceFormContext = {
   companies: InvoiceFormCompany[];
-  counterparties: Array<{ id: string; name: string; isActive: boolean }>;
+  counterparties: Array<{
+    id: string;
+    name: string;
+    isActive: boolean;
+    location: InvoiceLocation;
+  }>;
   paymentTerms: Array<{ id: string; code: string; label: string }>;
 };
 
@@ -150,6 +162,7 @@ const todayIso = new Date().toISOString().slice(0, 10);
 
 const emptyDefaults: InvoiceFormValues = {
   template: "ibg_thb",
+  location: "phuket",
   ourCompanyId: "",
   ourBankAccountId: "",
   counterpartyId: "",
@@ -227,6 +240,8 @@ export function InvoiceForm({
   const ourCompanyId = useWatch({ control, name: "ourCompanyId" });
   const template = useWatch({ control, name: "template" });
   const issueDate = useWatch({ control, name: "issueDate" });
+  const location = (useWatch({ control, name: "location" }) ??
+    "phuket") as InvoiceLocation;
 
   // Due date = issueDate + 5 days, but only until the user touches the field
   // manually. Once they change it, we stop auto-syncing, so we don't clobber
@@ -321,6 +336,26 @@ export function InvoiceForm({
   const currentCompany = ctx.companies.find((c) => c.id === ourCompanyId);
   const availableBanks = currentCompany?.bankAccounts ?? [];
 
+  // Only counterparties of the selected location are pickable — this is what
+  // keeps Phuket and Pattaya separate in the invoice flow.
+  const visibleCounterparties = counterpartyOptions.filter(
+    (c) => c.isActive && c.location === location,
+  );
+
+  // Switching location re-scopes the picker and drops a now-out-of-location
+  // selection, so a Phuket counterparty can't end up on a Pattaya invoice.
+  // Location is locked once the invoice is published (number already allocated
+  // against that location's sequence).
+  const handleLocationChange = (loc: InvoiceLocation) => {
+    if (loc === location || isPostPublication) return;
+    setValue("location", loc, { shouldDirty: true });
+    const selectedId = form.getValues("counterpartyId");
+    const selectedCp = counterpartyOptions.find((c) => c.id === selectedId);
+    if (selectedCp && selectedCp.location !== loc) {
+      setValue("counterpartyId", "", { shouldDirty: true });
+    }
+  };
+
   const onSubmit = (values: InvoiceFormValues) => {
     setMessage(null);
     startTransition(async () => {
@@ -357,6 +392,46 @@ export function InvoiceForm({
           </div>
         </div>
       )}
+
+      {/* ───── Location ─────
+          Picked first: scopes the counterparty list below and decides which
+          numbering sequence + storage folder this invoice belongs to. */}
+      <section className="border rounded-lg p-5 bg-white space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-medium">Location</h2>
+          {isPostPublication && (
+            <span className="text-xs text-zinc-500">
+              Locked after issuing
+            </span>
+          )}
+        </div>
+        <div className="inline-flex rounded-lg border p-1 bg-zinc-50">
+          {(["phuket", "pattaya"] as InvoiceLocation[]).map((loc) => {
+            const active = location === loc;
+            return (
+              <button
+                key={loc}
+                type="button"
+                disabled={isPostPublication}
+                onClick={() => handleLocationChange(loc)}
+                className={`px-5 py-2 text-sm rounded-md transition ${
+                  active
+                    ? "bg-black text-white shadow-sm"
+                    : "text-zinc-600 hover:text-black"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {LOCATION_LABEL[loc]}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-zinc-500">
+          Only {LOCATION_LABEL[location]} counterparties are shown below.{" "}
+          {location === "pattaya"
+            ? "Pattaya invoices are numbered PTY-… in their own sequence."
+            : "Phuket invoices are numbered HKT-… in their own sequence."}
+        </p>
+      </section>
 
       {/* ───── Details ───── */}
       <section className="border rounded-lg p-5 bg-white space-y-4">
@@ -443,7 +518,7 @@ export function InvoiceForm({
                       value={field.value ?? ""}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
-                      options={counterpartyOptions.filter((c) => c.isActive)}
+                      options={visibleCounterparties}
                     />
                   )}
                 />
@@ -882,7 +957,7 @@ export function InvoiceForm({
             <div className="self-end text-xs text-zinc-500 pb-2">
               {isPostPublication
                 ? "Editing this changes the number on the invoice itself. The auto-incrementing serial keeps marching forward independently."
-                : "Used verbatim when this draft is issued. Leave blank to use the default DD/MM/YYYY-NNNN format — next invoices keep auto-incrementing regardless."}
+                : "Used verbatim when this draft is issued. Leave blank to use the default per-location format (HKT-/PTY-…) — next invoices keep auto-incrementing regardless."}
             </div>
           </div>
         </details>
@@ -947,12 +1022,14 @@ export function InvoiceForm({
       {cpModal.open && (
         <QuickAddCounterpartyModal
           mode={cpModal.mode}
+          location={location}
           onClose={() => setCpModal({ open: false })}
           onCreated={(cp) => {
             // Extend the local options and snap the combobox onto the new entry.
+            // It inherits the form's current location so it stays visible.
             setCounterpartyOptions((prev) => [
               ...prev,
-              { id: cp.id, name: cp.name, isActive: true },
+              { id: cp.id, name: cp.name, isActive: true, location },
             ]);
             setValue("counterpartyId", cp.id, { shouldDirty: true });
             setCpModal({ open: false });
@@ -1241,10 +1318,12 @@ function CounterpartyCombobox({
 
 function QuickAddCounterpartyModal({
   mode,
+  location,
   onClose,
   onCreated,
 }: {
   mode: "full" | "adHoc";
+  location: InvoiceLocation;
   onClose: () => void;
   onCreated: (cp: { id: string; name: string }) => void;
 }) {
@@ -1275,6 +1354,7 @@ function QuickAddCounterpartyModal({
       taxId: taxId.trim(),
       address: address.trim(),
       preferredLanguage: language,
+      location,
     });
     setBusy(false);
     if (!res.ok) {
@@ -1309,7 +1389,8 @@ function QuickAddCounterpartyModal({
             <p className="text-xs text-zinc-500 mt-0.5">
               {mode === "adHoc"
                 ? "One-off — won't show up in the main counterparty list."
-                : "Key fields for the PDF — edit the rest later if needed."}
+                : "Key fields for the PDF — edit the rest later if needed."}{" "}
+              Added under <strong>{LOCATION_LABEL[location]}</strong>.
             </p>
           </div>
           <button

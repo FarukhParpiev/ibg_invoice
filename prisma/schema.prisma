@@ -108,6 +108,15 @@ enum Currency {
   RUB
 }
 
+// Географическая локация бизнеса. Контрагенты и инвойсы разделяются по
+// локациям: у каждой свой счётчик номеров (serialNumber уникален в паре с
+// location) и своя папка в Drive/Blob-хранилище. Phuket — дефолт: все
+// существующие записи остаются на нём, поведение не меняется.
+enum Location {
+  phuket
+  pattaya
+}
+
 model Company {
   id              String    @id @default(cuid())
   name            String
@@ -168,6 +177,10 @@ model Counterparty {
   email             String?
   preferredLanguage PreferredLanguage @default(en)
   notes             String?           @db.Text
+  // Локация контрагента. Фильтрует выпадающий список при создании инвойса:
+  // выбрав Phuket/Pattaya сверху формы, видишь только контрагентов этой
+  // локации. Все импортированные ранее контрагенты — phuket.
+  location          Location          @default(phuket)
   isActive          Boolean           @default(true)
   // Одноразовые контрагенты — напр. "Miss Larisa" для депозитов. Не попадают
   // в основной справочник /admin/counterparties, но используются в инвойсе
@@ -183,6 +196,7 @@ model Counterparty {
   @@index([isActive])
   @@index([isAdHoc])
   @@index([name])
+  @@index([location])
   @@map("counterparties")
 }
 
@@ -245,9 +259,10 @@ model Invoice {
   // Для receipt: «NNNN-R» (суффикс -R к номеру родителя).
   // NULL для draft — присваивается при переходе в issued.
   number       String? @unique
-  // Монотонный глобальный счётчик, присваивается при issuance.
-  // Используется для генерации NNNN в number.
-  serialNumber Int?    @unique
+  // Счётчик номеров, присваивается при issuance. Теперь он СВОЙ для каждой
+  // локации (см. @@unique([location, serialNumber])): Phuket продолжает свой
+  // ряд, Pattaya считает с 1. NULL для draft.
+  serialNumber Int?
 
   // Пользовательский override полного номера инвойса (например
   // "23/04/2026-0001" или любой внешний формат для переноса из другой
@@ -263,6 +278,11 @@ model Invoice {
 
   template InvoiceTemplate
   status   InvoiceStatus   @default(draft)
+
+  // Локация бизнеса. Задаётся при создании (переключатель сверху формы),
+  // фиксируется навсегда — от неё зависит счётчик номеров и папка хранения.
+  // Receipt наследует локацию родителя. Все старые инвойсы — phuket.
+  location Location @default(phuket)
 
   primaryCurrency   Currency @default(THB)
   showUsdEquivalent Boolean  @default(false)
@@ -352,11 +372,15 @@ model Invoice {
 
   // Receipt обязан ссылаться на инвойс (контроль через триггер в миграции)
 
+  // Счётчик номеров уникален В ПРЕДЕЛАХ локации, а не глобально. NULL-серийники
+  // (драфты) допускаются в любом количестве — Postgres считает NULL различными.
+  @@unique([location, serialNumber])
   @@index([status, issueDate])
   @@index([counterpartyId])
   @@index([ourCompanyId, issueDate])
   @@index([parentInvoiceId])
   @@index([type, status])
+  @@index([location, type, status])
   @@index([archivedAt])
   @@map("invoices")
 }

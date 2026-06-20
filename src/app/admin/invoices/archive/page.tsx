@@ -69,6 +69,7 @@ export default async function ArchivedInvoicesPage(
       number: inv.number,
       status: inv.status,
       type: inv.type,
+      location: inv.location,
       issueDate: inv.issueDate.toISOString().slice(0, 10),
       title,
       companyName: inv.ourCompany.name,

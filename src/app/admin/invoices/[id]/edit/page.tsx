@@ -21,7 +21,7 @@ export default async function EditInvoicePage(
     }),
     prisma.counterparty.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, isActive: true },
+      select: { id: true, name: true, isActive: true, location: true },
     }),
     prisma.paymentTerms.findMany({
       where: { isActive: true },
@@ -62,6 +62,7 @@ export default async function EditInvoicePage(
     // "others_thai" was retired — legacy drafts using it load in as "blank"
     // (same effect — fully manual template) so the form type stays narrow.
     template: invoice.template === "others_thai" ? "blank" : invoice.template,
+    location: invoice.location,
     ourCompanyId: invoice.ourCompanyId,
     ourBankAccountId: invoice.ourBankAccountId,
     counterpartyId: invoice.counterpartyId,

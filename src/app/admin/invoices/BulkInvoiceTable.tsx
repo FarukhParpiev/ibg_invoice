@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { InvoiceStatus, InvoiceType } from "@prisma/client";
+import type { InvoiceStatus, InvoiceType, Location } from "@prisma/client";
 import {
   bulkDeleteDrafts,
   bulkArchiveInvoices,
@@ -32,6 +32,7 @@ export type BulkInvoiceRow = {
   number: string | null;
   status: InvoiceStatus;
   type: InvoiceType;
+  location: Location;
   issueDate: string; // YYYY-MM-DD (already serialised by the server)
   title: string;
   companyName: string;
@@ -241,6 +242,13 @@ export function BulkInvoiceTable({
                     {r.hasReceipt && (
                       <span className="ml-2 text-[10px] bg-green-50 text-green-800 px-1.5 py-0.5 rounded">
                         +R
+                      </span>
+                    )}
+                    {/* Phuket is the default — only flag Pattaya, so the list
+                        stays clean while the non-default location stands out. */}
+                    {r.location === "pattaya" && (
+                      <span className="ml-2 text-[10px] bg-violet-50 text-violet-800 px-1.5 py-0.5 rounded">
+                        Pattaya
                       </span>
                     )}
                   </td>

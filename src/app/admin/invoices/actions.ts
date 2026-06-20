@@ -95,6 +95,9 @@ const exchangeRateField = z.preprocess(
 
 const invoiceSchema = z.object({
   template: z.enum(templates),
+  // Business location. Drives per-location numbering + storage folder. Defaults
+  // to phuket so older clients / payloads without the field keep working.
+  location: z.enum(["phuket", "pattaya"]).default("phuket"),
   ourCompanyId: z.string().min(1, "Select a company"),
   ourBankAccountId: z.string().min(1, "Select a bank account"),
   counterpartyId: z.string().min(1, "Select a counterparty"),
@@ -273,6 +276,7 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
       type: "invoice",
       status: "draft",
       template: v.template,
+      location: v.location,
       numberOverride: v.numberOverride ?? null,
 
       primaryCurrency,
@@ -399,6 +403,10 @@ export async function updateDraftInvoice(
       ? { number: trimmedOverride }
       : {};
 
+  // Location can only be changed while still a draft — once issued, the number
+  // and serial are already allocated against the original location's sequence.
+  const locationUpdate = isDraft ? { location: v.location } : {};
+
   await prisma.$transaction(async (tx) => {
     await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
     await tx.invoice.update({
@@ -406,6 +414,7 @@ export async function updateDraftInvoice(
       data: {
         template: v.template,
         ...numberFieldUpdate,
+        ...locationUpdate,
         primaryCurrency,
         showUsdEquivalent,
         exchangeRate: toDecimalOrNull(v.exchangeRate ?? null),
@@ -501,19 +510,20 @@ export async function issueInvoice(id: string): Promise<Result> {
           throw new Error("A receipt cannot be issued directly");
         }
 
-        // Always allocate a fresh serial for sequencing; the unique index on
-        // serialNumber protects against races (the outer retry kicks in if
-        // we collide with a concurrent issuance).
-        const serial = await allocateNextSerial(tx);
+        // Always allocate a fresh serial for sequencing, scoped to this
+        // invoice's location; the unique index on (location, serialNumber)
+        // protects against races (the outer retry kicks in if we collide with
+        // a concurrent issuance in the same location).
+        const serial = await allocateNextSerial(tx, inv.location);
         // If the user pinned a custom full number on the draft (e.g. to
         // match a legacy external format), use it verbatim. Otherwise fall
-        // back to the default DD/MM/YYYY-NNNN generator. The override is
-        // cleared after issuance so any subsequent regen/re-issue doesn't
-        // pick it up again.
+        // back to the default generator (HKT- for Phuket, PTY- for Pattaya). The
+        // override is cleared after issuance so any subsequent regen/re-issue
+        // doesn't pick it up again.
         const number =
           inv.numberOverride && inv.numberOverride.trim().length > 0
             ? inv.numberOverride.trim()
-            : buildInvoiceNumber(inv.issueDate, serial);
+            : buildInvoiceNumber(inv.issueDate, serial, inv.location);
 
         return tx.invoice.update({
           where: { id },
@@ -603,6 +613,7 @@ export async function payInvoice(
             parentInvoiceId: inv.id,
 
             template: inv.template,
+            location: inv.location,
 
             primaryCurrency: inv.primaryCurrency,
             showUsdEquivalent: inv.showUsdEquivalent,
@@ -969,6 +980,7 @@ export async function duplicateInvoice(id: string): Promise<Result> {
       type: "invoice",
       status: "draft",
       template: src.template,
+      location: src.location,
 
       primaryCurrency: src.primaryCurrency,
       showUsdEquivalent: src.showUsdEquivalent,

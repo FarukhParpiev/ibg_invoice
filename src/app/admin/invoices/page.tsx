@@ -1,7 +1,29 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import type { InvoiceStatus, InvoiceType } from "@prisma/client";
+import type { InvoiceStatus, InvoiceType, Location } from "@prisma/client";
 import { BulkInvoiceTable, type BulkInvoiceRow } from "./BulkInvoiceTable";
+
+const LOCATION_LABEL: Record<Location, string> = {
+  phuket: "Phuket",
+  pattaya: "Pattaya",
+};
+
+// Build an /admin/invoices URL from a desired filter set. Used by the filter
+// chips and the search form so switching one dimension preserves the others.
+function makeHref(params: {
+  status?: InvoiceStatus | null;
+  type?: InvoiceType | null;
+  location?: Location | null;
+  q?: string;
+}): string {
+  const usp = new URLSearchParams();
+  if (params.status) usp.set("status", params.status);
+  if (params.type) usp.set("type", params.type);
+  if (params.location) usp.set("location", params.location);
+  if (params.q) usp.set("q", params.q);
+  const qs = usp.toString();
+  return qs ? `/admin/invoices?${qs}` : "/admin/invoices";
+}
 
 export default async function InvoicesListPage(
   props: PageProps<"/admin/invoices">,
@@ -14,11 +36,16 @@ export default async function InvoicesListPage(
       : null;
   const typeFilter: InvoiceType | null =
     sp.type === "receipt" ? "receipt" : sp.type === "invoice" ? "invoice" : null;
+  const locationFilter: Location | null =
+    sp.location === "phuket" || sp.location === "pattaya"
+      ? (sp.location as Location)
+      : null;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
 
   const where = {
     // Hide archived rows from the default list — they live in /admin/invoices/archive.
     archivedAt: null,
+    ...(locationFilter ? { location: locationFilter } : {}),
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(typeFilter ? { type: typeFilter } : { type: "invoice" as const }),
     ...(q
@@ -74,7 +101,11 @@ export default async function InvoicesListPage(
     }),
     prisma.invoice.groupBy({
       by: ["status"],
-      where: { type: "invoice", archivedAt: null },
+      where: {
+        type: "invoice",
+        archivedAt: null,
+        ...(locationFilter ? { location: locationFilter } : {}),
+      },
       _count: true,
     }),
     prisma.invoice.count({ where: { archivedAt: { not: null } } }),
@@ -97,6 +128,7 @@ export default async function InvoicesListPage(
       number: inv.number,
       status: inv.status,
       type: inv.type,
+      location: inv.location,
       issueDate: inv.issueDate.toISOString().slice(0, 10),
       title,
       companyName: inv.ourCompany.name,
@@ -133,9 +165,33 @@ export default async function InvoicesListPage(
         </div>
       )}
 
+      {/* Location filter — top-level Phuket / Pattaya split. Preserves the
+          active status/type/search so you can drill into one location's drafts. */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-zinc-500 mr-1">Location:</span>
+        <FilterChip
+          href={makeHref({ status: statusFilter, type: typeFilter, q })}
+          active={locationFilter === null}
+          label="All"
+        />
+        {(["phuket", "pattaya"] as Location[]).map((loc) => (
+          <FilterChip
+            key={loc}
+            href={makeHref({
+              status: statusFilter,
+              type: typeFilter,
+              q,
+              location: loc,
+            })}
+            active={locationFilter === loc}
+            label={LOCATION_LABEL[loc]}
+          />
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <FilterChip
-          href="/admin/invoices"
+          href={makeHref({ location: locationFilter })}
           active={statusFilter === null && typeFilter === null}
           label={`All · ${Object.values(countMap).reduce((s, n) => s + n, 0)}`}
         />
@@ -143,14 +199,14 @@ export default async function InvoicesListPage(
           (s) => (
             <FilterChip
               key={s}
-              href={`/admin/invoices?status=${s}`}
+              href={makeHref({ status: s, location: locationFilter })}
               active={statusFilter === s && typeFilter === null}
               label={`${labelOf(s)} · ${countMap[s] ?? 0}`}
             />
           ),
         )}
         <FilterChip
-          href="/admin/invoices?type=receipt"
+          href={makeHref({ type: "receipt", location: locationFilter })}
           active={typeFilter === "receipt"}
           label="Receipts"
         />
@@ -171,6 +227,9 @@ export default async function InvoicesListPage(
           <input type="hidden" name="status" value={statusFilter} />
         )}
         {typeFilter && <input type="hidden" name="type" value={typeFilter} />}
+        {locationFilter && (
+          <input type="hidden" name="location" value={locationFilter} />
+        )}
         <input
           type="search"
           name="q"
@@ -186,13 +245,11 @@ export default async function InvoicesListPage(
         </button>
         {q && (
           <Link
-            href={
-              statusFilter
-                ? `/admin/invoices?status=${statusFilter}`
-                : typeFilter
-                  ? `/admin/invoices?type=${typeFilter}`
-                  : "/admin/invoices"
-            }
+            href={makeHref({
+              status: statusFilter,
+              type: typeFilter,
+              location: locationFilter,
+            })}
             className="text-sm text-zinc-500 hover:text-zinc-900 py-2"
           >
             Reset

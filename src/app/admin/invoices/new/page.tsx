@@ -15,7 +15,7 @@ export default async function NewInvoicePage() {
     }),
     prisma.counterparty.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, isActive: true },
+      select: { id: true, name: true, isActive: true, location: true },
     }),
     prisma.paymentTerms.findMany({
       where: { isActive: true },

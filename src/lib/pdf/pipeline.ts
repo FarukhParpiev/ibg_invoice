@@ -37,7 +37,7 @@ export async function regenerateInvoicePdf(
   const data = await loadInvoiceForPdf(invoiceId);
   const html = renderInvoiceHtml(data);
   const pdf = await renderHtmlToPdf(html);
-  const uploaded = await uploadInvoicePdf(invoiceId, data.number, pdf);
+  const uploaded = await uploadInvoicePdf(invoiceId, data.number, data.location, pdf);
 
   // We keep a version history — JSON array in Invoice.pdfVersions
   const prev = Array.isArray(data.pdfVersions)

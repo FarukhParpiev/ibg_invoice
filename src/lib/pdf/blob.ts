@@ -8,6 +8,7 @@
 
 import { put, del } from "@vercel/blob";
 import { randomBytes } from "node:crypto";
+import type { Location } from "@prisma/client";
 
 export type UploadedPdf = {
   url: string;
@@ -16,19 +17,26 @@ export type UploadedPdf = {
   size: number;
 };
 
-function makeKey(invoiceId: string, number: string | null): string {
+// PDFs are foldered by location first, so the Blob store mirrors the
+// Phuket/Pattaya split (invoices/phuket/<id>/… and invoices/pattaya/<id>/…).
+function makeKey(
+  invoiceId: string,
+  number: string | null,
+  location: Location,
+): string {
   const slug = (number ?? "draft").replace(/[^a-zA-Z0-9_-]+/g, "_");
   const stamp = Date.now();
   const nonce = randomBytes(6).toString("hex");
-  return `invoices/${invoiceId}/${stamp}-${nonce}-${slug}.pdf`;
+  return `invoices/${location}/${invoiceId}/${stamp}-${nonce}-${slug}.pdf`;
 }
 
 export async function uploadInvoicePdf(
   invoiceId: string,
   number: string | null,
+  location: Location,
   pdf: Buffer,
 ): Promise<UploadedPdf> {
-  const pathname = makeKey(invoiceId, number);
+  const pathname = makeKey(invoiceId, number, location);
   const blob = await put(pathname, pdf, {
     access: "public",
     contentType: "application/pdf",
