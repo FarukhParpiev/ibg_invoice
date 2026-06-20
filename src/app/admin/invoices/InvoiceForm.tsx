@@ -48,12 +48,7 @@ export const LOCATION_LABEL: Record<InvoiceLocation, string> = {
 
 export type InvoiceFormContext = {
   companies: InvoiceFormCompany[];
-  counterparties: Array<{
-    id: string;
-    name: string;
-    isActive: boolean;
-    location: InvoiceLocation;
-  }>;
+  counterparties: Array<{ id: string; name: string; isActive: boolean }>;
   paymentTerms: Array<{ id: string; code: string; label: string }>;
 };
 
@@ -336,24 +331,16 @@ export function InvoiceForm({
   const currentCompany = ctx.companies.find((c) => c.id === ourCompanyId);
   const availableBanks = currentCompany?.bankAccounts ?? [];
 
-  // Only counterparties of the selected location are pickable — this is what
-  // keeps Phuket and Pattaya separate in the invoice flow.
-  const visibleCounterparties = counterpartyOptions.filter(
-    (c) => c.isActive && c.location === location,
-  );
+  // Counterparties are a single shared pool — all active ones are pickable
+  // regardless of the invoice's location.
+  const visibleCounterparties = counterpartyOptions.filter((c) => c.isActive);
 
-  // Switching location re-scopes the picker and drops a now-out-of-location
-  // selection, so a Phuket counterparty can't end up on a Pattaya invoice.
-  // Location is locked once the invoice is published (number already allocated
-  // against that location's sequence).
+  // The location toggle only sets the invoice's location (which drives its
+  // HKT-/PTY- number + storage folder). It no longer scopes the counterparty
+  // list. Locked once the invoice is published (number already allocated).
   const handleLocationChange = (loc: InvoiceLocation) => {
     if (loc === location || isPostPublication) return;
     setValue("location", loc, { shouldDirty: true });
-    const selectedId = form.getValues("counterpartyId");
-    const selectedCp = counterpartyOptions.find((c) => c.id === selectedId);
-    if (selectedCp && selectedCp.location !== loc) {
-      setValue("counterpartyId", "", { shouldDirty: true });
-    }
   };
 
   const onSubmit = (values: InvoiceFormValues) => {
@@ -426,10 +413,10 @@ export function InvoiceForm({
           })}
         </div>
         <p className="text-xs text-zinc-500">
-          Only {LOCATION_LABEL[location]} counterparties are shown below.{" "}
           {location === "pattaya"
             ? "Pattaya invoices are numbered PTY-… in their own sequence."
-            : "Phuket invoices are numbered HKT-… in their own sequence."}
+            : "Phuket invoices are numbered HKT-… in their own sequence."}{" "}
+          The counterparty list below is shared across both locations.
         </p>
       </section>
 
@@ -1022,14 +1009,12 @@ export function InvoiceForm({
       {cpModal.open && (
         <QuickAddCounterpartyModal
           mode={cpModal.mode}
-          location={location}
           onClose={() => setCpModal({ open: false })}
           onCreated={(cp) => {
             // Extend the local options and snap the combobox onto the new entry.
-            // It inherits the form's current location so it stays visible.
             setCounterpartyOptions((prev) => [
               ...prev,
-              { id: cp.id, name: cp.name, isActive: true, location },
+              { id: cp.id, name: cp.name, isActive: true },
             ]);
             setValue("counterpartyId", cp.id, { shouldDirty: true });
             setCpModal({ open: false });
@@ -1318,12 +1303,10 @@ function CounterpartyCombobox({
 
 function QuickAddCounterpartyModal({
   mode,
-  location,
   onClose,
   onCreated,
 }: {
   mode: "full" | "adHoc";
-  location: InvoiceLocation;
   onClose: () => void;
   onCreated: (cp: { id: string; name: string }) => void;
 }) {
@@ -1354,7 +1337,6 @@ function QuickAddCounterpartyModal({
       taxId: taxId.trim(),
       address: address.trim(),
       preferredLanguage: language,
-      location,
     });
     setBusy(false);
     if (!res.ok) {
@@ -1389,8 +1371,7 @@ function QuickAddCounterpartyModal({
             <p className="text-xs text-zinc-500 mt-0.5">
               {mode === "adHoc"
                 ? "One-off — won't show up in the main counterparty list."
-                : "Key fields for the PDF — edit the rest later if needed."}{" "}
-              Added under <strong>{LOCATION_LABEL[location]}</strong>.
+                : "Key fields for the PDF — edit the rest later if needed."}
             </p>
           </div>
           <button

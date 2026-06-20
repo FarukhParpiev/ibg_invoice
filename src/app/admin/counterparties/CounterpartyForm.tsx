@@ -19,7 +19,6 @@ const emptyDefaults: CounterpartyFormValues = {
   phone: "",
   email: "",
   preferredLanguage: "en",
-  location: "phuket",
   notes: "",
   isActive: true,
 };
@@ -96,13 +95,6 @@ export function CounterpartyForm({
           <select className="input" {...register("preferredLanguage")}>
             <option value="en">English</option>
             <option value="th">ภาษาไทย</option>
-          </select>
-        </Field>
-
-        <Field label="Location">
-          <select className="input" {...register("location")}>
-            <option value="phuket">Phuket</option>
-            <option value="pattaya">Pattaya</option>
           </select>
         </Field>
 
