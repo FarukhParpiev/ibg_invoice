@@ -329,7 +329,7 @@ ${paidBanner}
       ${invoice.ourCompany.address ? `<div class="row">${escapeHtml(invoice.ourCompany.address)}</div>` : ""}
       ${invoice.ourCompany.taxId ? `<div class="row">${escapeHtml(L.taxId)}: ${escapeHtml(invoice.ourCompany.taxId)}</div>` : ""}
       ${invoice.ourCompany.registrationNo ? `<div class="row">${escapeHtml(L.registrationNo)}: ${escapeHtml(invoice.ourCompany.registrationNo)}</div>` : ""}
-      ${invoice.ourCompany.phone ? `<div class="row">${escapeHtml(L.phone)}: ${escapeHtml(invoice.ourCompany.phone)}</div>` : ""}
+      ${/* Phone is deliberately NOT printed on the invoice (still kept in the DB + admin). */ ""}
       ${invoice.ourCompany.email ? `<div class="row">${escapeHtml(L.email)}: ${escapeHtml(invoice.ourCompany.email)}</div>` : ""}
     </div>
   </div>
@@ -339,7 +339,7 @@ ${paidBanner}
     <div class="info">
       ${invoice.counterparty.address ? `<div class="row">${escapeHtml(invoice.counterparty.address)}</div>` : ""}
       ${invoice.counterparty.taxId ? `<div class="row">${escapeHtml(L.taxId)}: ${escapeHtml(invoice.counterparty.taxId)}</div>` : ""}
-      ${invoice.counterparty.phone ? `<div class="row">${escapeHtml(L.phone)}: ${escapeHtml(invoice.counterparty.phone)}</div>` : ""}
+      ${/* Phone is deliberately NOT printed on the invoice (still kept in the DB + admin). */ ""}
       ${invoice.counterparty.email ? `<div class="row">${escapeHtml(L.email)}: ${escapeHtml(invoice.counterparty.email)}</div>` : ""}
     </div>
   </div>
