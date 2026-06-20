@@ -13,7 +13,6 @@ const counterpartySchema = z.object({
   phone: z.string().max(100).optional().or(z.literal("")),
   email: z.string().email("Invalid e-mail").or(z.literal("")),
   preferredLanguage: z.enum(["en", "th"]),
-  location: z.enum(["phuket", "pattaya"]),
   notes: z.string().max(5000).optional().or(z.literal("")),
   isActive: z.boolean(),
 });
@@ -36,9 +35,6 @@ const quickAddSchema = z.object({
   taxId: z.string().max(100).optional().or(z.literal("")),
   address: z.string().max(1000).optional().or(z.literal("")),
   preferredLanguage: z.enum(["en", "th"]).default("en"),
-  // Inherited from the invoice form's current location so the new entry shows
-  // up in that location's picker. Defaults to phuket for safety.
-  location: z.enum(["phuket", "pattaya"]).default("phuket"),
 });
 
 // Full quick-add: adds a regular counterparty (shows up in /admin/counterparties
@@ -57,9 +53,7 @@ export async function createCounterpartyQuick(
       name: parsed.data.name,
       taxId: parsed.data.taxId || null,
       address: parsed.data.address || null,
-      preferredLanguage: parsed.data.preferredLanguage,
-      location: parsed.data.location,
-      isActive: true,
+      preferredLanguage: parsed.data.preferredLanguage,      isActive: true,
       isAdHoc: false,
     },
     select: { id: true, name: true },
@@ -84,9 +78,7 @@ export async function createCounterpartyAdHoc(
       name: parsed.data.name,
       taxId: parsed.data.taxId || null,
       address: parsed.data.address || null,
-      preferredLanguage: parsed.data.preferredLanguage,
-      location: parsed.data.location,
-      isActive: true,
+      preferredLanguage: parsed.data.preferredLanguage,      isActive: true,
       isAdHoc: true,
     },
     select: { id: true, name: true },
@@ -109,9 +101,7 @@ export async function createCounterparty(rawValues: unknown): Promise<Result> {
       taxId: v.taxId || null,
       phone: v.phone || null,
       email: v.email || null,
-      preferredLanguage: v.preferredLanguage,
-      location: v.location,
-      notes: v.notes || null,
+      preferredLanguage: v.preferredLanguage,      notes: v.notes || null,
       isActive: v.isActive,
     },
   });
@@ -137,9 +127,7 @@ export async function updateCounterparty(
       taxId: v.taxId || null,
       phone: v.phone || null,
       email: v.email || null,
-      preferredLanguage: v.preferredLanguage,
-      location: v.location,
-      notes: v.notes || null,
+      preferredLanguage: v.preferredLanguage,      notes: v.notes || null,
       isActive: v.isActive,
     },
   });

@@ -40,7 +40,6 @@ export default async function EditCounterpartyPage(
           phone: cp.phone ?? "",
           email: cp.email ?? "",
           preferredLanguage: cp.preferredLanguage,
-          location: cp.location,
           notes: cp.notes ?? "",
           isActive: cp.isActive,
         }}

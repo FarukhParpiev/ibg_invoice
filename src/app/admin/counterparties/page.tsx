@@ -1,12 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import type { Location } from "@prisma/client";
 import { SearchInput } from "./SearchInput";
-
-const LOCATION_LABEL: Record<Location, string> = {
-  phuket: "Phuket",
-  pattaya: "Pattaya",
-};
 
 export default async function CounterpartiesListPage(
   props: PageProps<"/admin/counterparties">,
@@ -14,10 +8,6 @@ export default async function CounterpartiesListPage(
   const sp = await props.searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const showArchived = sp.archived === "1" || sp.all === "1";
-  const locationFilter: Location | null =
-    sp.location === "phuket" || sp.location === "pattaya"
-      ? (sp.location as Location)
-      : null;
 
   // Pagination — 50 per page, prev/next at the bottom. Pages are 1-indexed in
   // the URL because that reads better in screenshots / shared links than 0-based.
@@ -30,7 +20,6 @@ export default async function CounterpartiesListPage(
     // Ad-hoc ("Miss Larisa"-style one-offs created from the invoice form) are
     // hidden from the main directory so the list stays a curated contact book.
     isAdHoc: false,
-    ...(locationFilter ? { location: locationFilter } : {}),
     ...(q
       ? {
           OR: [
@@ -68,19 +57,7 @@ export default async function CounterpartiesListPage(
     if (q) params.set("q", q);
     if (sp.all === "1") params.set("all", "1");
     if (sp.archived === "1") params.set("archived", "1");
-    if (locationFilter) params.set("location", locationFilter);
     if (p > 1) params.set("page", String(p));
-    const qs = params.toString();
-    return qs ? `/admin/counterparties?${qs}` : "/admin/counterparties";
-  };
-
-  // Location filter links preserve the active search / archived view.
-  const buildLocationHref = (loc: Location | null) => {
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    if (sp.all === "1") params.set("all", "1");
-    if (sp.archived === "1") params.set("archived", "1");
-    if (loc) params.set("location", loc);
     const qs = params.toString();
     return qs ? `/admin/counterparties?${qs}` : "/admin/counterparties";
   };
@@ -130,30 +107,12 @@ export default async function CounterpartiesListPage(
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-zinc-500 mr-1">Location:</span>
-        <FilterChip
-          href={buildLocationHref(null)}
-          active={locationFilter === null}
-          label="All"
-        />
-        {(["phuket", "pattaya"] as Location[]).map((loc) => (
-          <FilterChip
-            key={loc}
-            href={buildLocationHref(loc)}
-            active={locationFilter === loc}
-            label={LOCATION_LABEL[loc]}
-          />
-        ))}
-      </div>
-
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-600">
             <tr>
               <th className="text-left px-4 py-3 font-medium">Name</th>
               <th className="text-left px-4 py-3 font-medium">Language</th>
-              <th className="text-left px-4 py-3 font-medium">Location</th>
               <th className="text-left px-4 py-3 font-medium">E-mail</th>
               <th className="text-left px-4 py-3 font-medium">Invoices</th>
               <th className="text-left px-4 py-3 font-medium">Status</th>
@@ -163,7 +122,7 @@ export default async function CounterpartiesListPage(
           <tbody>
             {counterparties.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-zinc-500">
                   {q
                     ? "Nothing found."
                     : "No counterparties yet. Create the first one."}
@@ -175,15 +134,6 @@ export default async function CounterpartiesListPage(
                   <td className="px-4 py-3 font-medium">{c.name}</td>
                   <td className="px-4 py-3 uppercase text-xs text-zinc-500">
                     {c.preferredLanguage}
-                  </td>
-                  <td className="px-4 py-3">
-                    {c.location === "pattaya" ? (
-                      <span className="text-xs bg-violet-50 text-violet-800 px-2 py-0.5 rounded">
-                        Pattaya
-                      </span>
-                    ) : (
-                      <span className="text-xs text-zinc-500">Phuket</span>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-zinc-600">{c.email ?? "—"}</td>
                   <td className="px-4 py-3 text-zinc-600">
@@ -253,28 +203,5 @@ export default async function CounterpartiesListPage(
         </div>
       )}
     </div>
-  );
-}
-
-function FilterChip({
-  href,
-  active,
-  label,
-}: {
-  href: string;
-  active: boolean;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`px-3 py-1 rounded-full border transition ${
-        active
-          ? "bg-black text-white border-black"
-          : "bg-white text-zinc-700 border-zinc-300 hover:border-zinc-500"
-      }`}
-    >
-      {label}
-    </Link>
   );
 }

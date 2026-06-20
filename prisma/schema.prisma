@@ -108,10 +108,10 @@ enum Currency {
   RUB
 }
 
-// Географическая локация бизнеса. Контрагенты и инвойсы разделяются по
-// локациям: у каждой свой счётчик номеров (serialNumber уникален в паре с
-// location) и своя папка в Drive/Blob-хранилище. Phuket — дефолт: все
-// существующие записи остаются на нём, поведение не меняется.
+// Географическая локация бизнеса — относится к ИНВОЙСУ (не к контрагенту:
+// контрагенты — единый общий пул без локации). У каждой локации свой счётчик
+// номеров (serialNumber уникален в паре с location) и своя папка в
+// Drive/Blob-хранилище. Phuket — дефолт.
 enum Location {
   phuket
   pattaya
@@ -177,10 +177,6 @@ model Counterparty {
   email             String?
   preferredLanguage PreferredLanguage @default(en)
   notes             String?           @db.Text
-  // Локация контрагента. Фильтрует выпадающий список при создании инвойса:
-  // выбрав Phuket/Pattaya сверху формы, видишь только контрагентов этой
-  // локации. Все импортированные ранее контрагенты — phuket.
-  location          Location          @default(phuket)
   isActive          Boolean           @default(true)
   // Одноразовые контрагенты — напр. "Miss Larisa" для депозитов. Не попадают
   // в основной справочник /admin/counterparties, но используются в инвойсе
@@ -196,7 +192,6 @@ model Counterparty {
   @@index([isActive])
   @@index([isAdHoc])
   @@index([name])
-  @@index([location])
   @@map("counterparties")
 }
 
