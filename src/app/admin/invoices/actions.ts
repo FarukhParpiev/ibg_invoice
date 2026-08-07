@@ -570,6 +570,11 @@ export async function issueInvoice(id: string): Promise<Result> {
 export async function payInvoice(
   id: string,
   paidAtIso: string,
+  // Amount received. Omitted/undefined → the full remaining balance (classic
+  // one-shot payment). Less than the remaining balance → a PARTIAL payment:
+  // the receipt is issued for this amount only and the invoice stays `issued`
+  // until follow-up payments cover the rest.
+  amountRaw?: number,
 ): Promise<Result> {
   const session = await requireAdminAccess();
 
@@ -578,10 +583,13 @@ export async function payInvoice(
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const receiptId = await prisma.$transaction(async (tx) => {
+      const outcome = await prisma.$transaction(async (tx) => {
         const inv = await tx.invoice.findUnique({
           where: { id },
-          include: { items: true },
+          include: {
+            items: true,
+            receipts: { select: { id: true, total: true } },
+          },
         });
         if (!inv) throw new Error("Invoice not found");
         if (inv.status !== "issued") {
@@ -594,17 +602,122 @@ export async function payInvoice(
           throw new Error("Invoice has no number — issue it first");
         }
 
-        await tx.invoice.update({
-          where: { id },
-          data: {
-            status: "paid",
-            paidAt,
-            paidBy: session.user.id,
-          },
-        });
+        // Everything paid so far lives in the child receipts' totals — no
+        // denormalised counter to drift out of sync.
+        const total = Number(inv.total);
+        const alreadyPaid = inv.receipts.reduce(
+          (s, r) => s + Number(r.total),
+          0,
+        );
+        const remaining = Math.round((total - alreadyPaid) * 100) / 100;
+        if (remaining <= 0) {
+          throw new Error(
+            "Nothing left to pay — the invoice is already fully covered by receipts",
+          );
+        }
+
+        const amount = Math.round((amountRaw ?? remaining) * 100) / 100;
+        if (!(amount > 0)) throw new Error("Payment amount must be positive");
+        if (amount > remaining + 0.005) {
+          throw new Error(
+            `Amount ${fmtAmount(amount)} exceeds the remaining balance ${fmtAmount(remaining)}`,
+          );
+        }
+
+        // 1-cent tolerance so "999.999" style float dust never blocks closing.
+        const isFinal = amount >= remaining - 0.005;
+        // The classic path (single full payment, no prior receipts) keeps the
+        // legacy behaviour byte-for-byte: full item copy + "-R" number.
+        const isClassicFull = isFinal && inv.receipts.length === 0;
+        const seq = inv.receipts.length + 1;
+        const receiptNumber = isClassicFull
+          ? buildReceiptNumber(inv.number)
+          : `${buildReceiptNumber(inv.number)}${seq}`; // …-R1, …-R2
+
+        // The invoice flips to paid only when the last payment lands.
+        if (isFinal) {
+          await tx.invoice.update({
+            where: { id },
+            data: {
+              status: "paid",
+              paidAt,
+              paidBy: session.user.id,
+            },
+          });
+        }
+
+        if (!isClassicFull) {
+          // Partial-payment receipt: a single payment line for the received
+          // amount. Taxes are NOT recomputed — they were settled on the
+          // invoice itself; the receipt only acknowledges money received.
+          // Neutral "blank" layout: the parent's THB/USD split doesn't apply
+          // to a plain payment acknowledgement.
+          const paidToDate = Math.round((alreadyPaid + amount) * 100) / 100;
+          const left = Math.round((remaining - amount) * 100) / 100;
+          const cur = inv.primaryCurrency;
+          const firstItem = inv.items.find(
+            (it) => it.projectName || it.unitCode,
+          );
+          const notes =
+            `${isFinal ? "Final" : "Partial"} payment ${seq} for invoice ${inv.number}: ${fmtAmount(amount)} ${cur}.\n` +
+            `Paid to date: ${fmtAmount(paidToDate)} of ${fmtAmount(total)} ${cur}.` +
+            (isFinal ? "" : `\nRemaining balance: ${fmtAmount(left)} ${cur}.`);
+
+          const receipt = await tx.invoice.create({
+            data: {
+              type: "receipt",
+              status: "paid",
+              number: receiptNumber,
+              parentInvoiceId: inv.id,
+
+              template: "blank",
+              location: inv.location,
+
+              primaryCurrency: inv.primaryCurrency,
+              showUsdEquivalent: false,
+
+              issueDate: paidAt,
+              paidAt,
+              paidBy: session.user.id,
+
+              vatApplied: false,
+              vatIncluded: false,
+              whtApplied: false,
+
+              subtotal: toDecimal(amount),
+              vatAmount: toDecimal(0),
+              whtAmount: toDecimal(0),
+              total: toDecimal(amount),
+
+              notesText: notes,
+
+              ourCompanyId: inv.ourCompanyId,
+              ourBankAccountId: inv.ourBankAccountId,
+              counterpartyId: inv.counterpartyId,
+              paymentTermsId: inv.paymentTermsId,
+
+              createdById: session.user.id,
+              issuedById: session.user.id,
+
+              items: {
+                create: [
+                  {
+                    positionNo: 1,
+                    itemType: "other" as const,
+                    projectName: firstItem?.projectName ?? `Payment ${seq}`,
+                    unitCode: firstItem?.unitCode ?? null,
+                    otherAmount: toDecimal(amount),
+                    amount: toDecimal(amount),
+                    note: `${isFinal ? "Final" : "Partial"} payment ${seq} for invoice ${inv.number}`,
+                  },
+                ],
+              },
+            },
+          });
+          return { receiptId: receipt.id, isClassicFull, isFinal, amount, seq };
+        }
 
         // Create a receipt — a copy of the source invoice with status paid and number <parent>-R
-        const receiptNumber = buildReceiptNumber(inv.number);
         const receipt = await tx.invoice.create({
           data: {
             type: "receipt",
@@ -668,7 +781,7 @@ export async function payInvoice(
           },
         });
 
-        return receipt.id;
+        return { receiptId: receipt.id, isClassicFull, isFinal, amount, seq };
       });
 
       await writeAudit({
@@ -676,25 +789,37 @@ export async function payInvoice(
         entity: "invoice",
         entityId: id,
         action: "pay",
-        diff: { after: { paidAt: paidAt.toISOString(), receiptId } },
+        diff: {
+          after: {
+            paidAt: paidAt.toISOString(),
+            receiptId: outcome.receiptId,
+            amount: outcome.amount,
+            paymentSeq: outcome.seq,
+            partial: !outcome.isFinal,
+          },
+        },
       });
 
-      // Regenerate both PDFs — the parent (now paid) and the fresh receipt.
-      try {
-        await regenerateInvoicePdf(id, session.user.id);
-      } catch (err) {
-        console.error("[payInvoice] parent PDF regen failed", err);
+      // Always render the fresh receipt's PDF. The parent PDF only needs a
+      // regen on the classic full path (legacy behaviour) — a partial payment
+      // doesn't change anything the parent PDF displays.
+      if (outcome.isClassicFull) {
+        try {
+          await regenerateInvoicePdf(id, session.user.id);
+        } catch (err) {
+          console.error("[payInvoice] parent PDF regen failed", err);
+        }
       }
       try {
-        await regenerateInvoicePdf(receiptId, session.user.id);
+        await regenerateInvoicePdf(outcome.receiptId, session.user.id);
       } catch (err) {
         console.error("[payInvoice] receipt PDF generate failed", err);
       }
 
       revalidatePath("/admin/invoices");
       revalidatePath(`/admin/invoices/${id}`);
-      revalidatePath(`/admin/invoices/${receiptId}`);
-      return { ok: true, id: receiptId };
+      revalidatePath(`/admin/invoices/${outcome.receiptId}`);
+      return { ok: true, id: outcome.receiptId };
     } catch (err) {
       if (isUniqueViolation(err) && attempt < 2) continue;
       return {
@@ -718,6 +843,18 @@ export async function cancelInvoice(
   }
   if (inv.status === "paid") {
     return { ok: false, error: "A paid invoice cannot be cancelled" };
+  }
+  // A partially paid invoice (issued + at least one receipt) already has
+  // money recorded against it — cancelling would orphan those receipts.
+  const receiptCount = await prisma.invoice.count({
+    where: { parentInvoiceId: id },
+  });
+  if (receiptCount > 0) {
+    return {
+      ok: false,
+      error:
+        "Invoice has recorded payments (receipts) and cannot be cancelled",
+    };
   }
 
   await prisma.invoice.update({
@@ -1045,6 +1182,14 @@ export async function duplicateInvoice(id: string): Promise<Result> {
 }
 
 // ────────────────────────────── utils ──────────────────────────────
+
+// Human-readable 2-dp amount for error messages and receipt notes.
+function fmtAmount(n: number): string {
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
 
 function isUniqueViolation(err: unknown): boolean {
   return (

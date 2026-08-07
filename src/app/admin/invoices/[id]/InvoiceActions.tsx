@@ -14,10 +14,19 @@ export function InvoiceActions({
   id,
   status,
   type,
+  // Payment progress — drives the partial-payment flow. `remaining` is
+  // total − sum of already-issued receipts; receiptsCount > 0 on an issued
+  // invoice means it is partially paid.
+  remaining,
+  currency,
+  receiptsCount,
 }: {
   id: string;
   status: InvoiceStatus;
   type: InvoiceType;
+  remaining: number;
+  currency: string;
+  receiptsCount: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -38,9 +47,25 @@ export function InvoiceActions({
       new Date().toISOString().slice(0, 10),
     );
     if (!dateStr) return;
+    // Second prompt: how much was received. Prefilled with the remaining
+    // balance, so the classic "paid in full" flow is still just Enter-Enter.
+    // A smaller value records a partial payment + receipt for that amount.
+    const amtStr = prompt(
+      `Amount received (${currency}). Remaining balance: ${remaining.toLocaleString(
+        "en-US",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+      )}.\nEnter a smaller amount for a partial payment:`,
+      remaining.toFixed(2),
+    );
+    if (amtStr === null) return;
+    const amount = Number(amtStr.replace(/[,\s]/g, ""));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Invalid amount");
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const res = await payInvoice(id, dateStr);
+      const res = await payInvoice(id, dateStr, amount);
       if (!res.ok) setError(res.error);
       else {
         router.push(`/admin/invoices/${res.id}`);
@@ -120,7 +145,9 @@ export function InvoiceActions({
               disabled={pending}
               className="bg-green-600 text-white rounded px-4 py-2 text-sm hover:bg-green-700 disabled:opacity-40"
             >
-              Mark as paid (+ receipt)
+              {receiptsCount > 0
+                ? "Add payment (+ receipt)"
+                : "Mark as paid (+ receipt)"}
             </button>
             {editButton}
             <button

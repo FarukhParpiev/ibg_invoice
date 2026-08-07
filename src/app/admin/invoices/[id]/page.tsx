@@ -48,7 +48,7 @@ export default async function InvoiceDetailPage(
       counterparty: true,
       paymentTerms: true,
       parentInvoice: true,
-      receipts: true,
+      receipts: { orderBy: { createdAt: "asc" } },
       createdBy: { select: { email: true, name: true } },
       issuedBy: { select: { email: true, name: true } },
       paidByUser: { select: { email: true, name: true } },
@@ -59,6 +59,15 @@ export default async function InvoiceDetailPage(
   if (!invoice) notFound();
 
   const flashError = sp.error === "notDraft";
+
+  // Payment progress: receipts carry the received amounts in their totals.
+  // An issued invoice with receipts is partially paid.
+  const paidSoFar = invoice.receipts.reduce((s, r) => s + Number(r.total), 0);
+  const remaining = Math.max(
+    0,
+    Math.round((Number(invoice.total) - paidSoFar) * 100) / 100,
+  );
+  const isPartiallyPaid = invoice.status === "issued" && invoice.receipts.length > 0;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -112,19 +121,36 @@ export default async function InvoiceDetailPage(
       )}
 
       {invoice.receipts.length > 0 && (
-        <div className="text-sm rounded bg-green-50 px-3 py-2">
-          Receipt:{" "}
-          {invoice.receipts.map((r, i) => (
-            <span key={r.id}>
-              {i > 0 && ", "}
+        <div className="text-sm rounded bg-green-50 px-3 py-2 space-y-1">
+          <div className="font-medium text-green-900">
+            {invoice.receipts.length === 1 ? "Receipt" : "Payments"}
+          </div>
+          {invoice.receipts.map((r) => (
+            <div key={r.id} className="flex flex-wrap gap-x-2">
               <Link
                 href={`/admin/invoices/${r.id}`}
                 className="underline font-mono"
               >
                 {r.number}
               </Link>
-            </span>
+              <span className="tabular-nums">
+                {fmt(r.total)} {r.primaryCurrency}
+              </span>
+              {r.paidAt && (
+                <span className="text-zinc-500">
+                  · {r.paidAt.toISOString().slice(0, 10)}
+                </span>
+              )}
+            </div>
           ))}
+        </div>
+      )}
+
+      {isPartiallyPaid && (
+        <div className="text-sm rounded bg-amber-50 text-amber-900 px-3 py-2">
+          <strong>Partially paid:</strong> {fmt(paidSoFar)} of{" "}
+          {fmt(invoice.total)} {invoice.primaryCurrency} · Remaining:{" "}
+          <strong>{fmt(remaining)} {invoice.primaryCurrency}</strong>
         </div>
       )}
 
@@ -132,6 +158,9 @@ export default async function InvoiceDetailPage(
         id={invoice.id}
         status={invoice.status}
         type={invoice.type}
+        remaining={remaining}
+        currency={invoice.primaryCurrency}
+        receiptsCount={invoice.receipts.length}
       />
 
       <div className="border rounded-lg p-4 bg-white space-y-3">

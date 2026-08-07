@@ -239,11 +239,17 @@ export function BulkInvoiceTable({
                         receipt
                       </span>
                     )}
-                    {r.hasReceipt && (
+                    {/* Issued + receipts = partially paid (money received but
+                        not the full total yet); paid keeps the usual +R mark. */}
+                    {r.hasReceipt && r.status === "issued" ? (
+                      <span className="ml-2 text-[10px] bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded">
+                        partial
+                      </span>
+                    ) : r.hasReceipt ? (
                       <span className="ml-2 text-[10px] bg-green-50 text-green-800 px-1.5 py-0.5 rounded">
                         +R
                       </span>
-                    )}
+                    ) : null}
                     {/* Phuket is the default — only flag Pattaya, so the list
                         stays clean while the non-default location stands out. */}
                     {r.location === "pattaya" && (
