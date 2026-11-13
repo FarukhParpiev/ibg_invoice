@@ -339,6 +339,11 @@ model Invoice {
 
   notesText String? @db.Text
 
+  // Внутренний рабочий комментарий сотрудников к инвойсу. Виден только в
+  // админке (карточка инвойса, форма); в печатную форму/PDF НЕ попадает —
+  // в отличие от notesText, который печатается в блоке Notes.
+  internalComment String? @db.Text
+
   // PDF
   pdfUrl      String?
   pdfVersions Json? // [{url, generatedAt, by}]

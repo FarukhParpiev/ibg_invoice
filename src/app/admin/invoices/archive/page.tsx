@@ -80,6 +80,7 @@ export default async function ArchivedInvoicesPage(
       }),
       primaryCurrency: inv.primaryCurrency,
       hasReceipt: inv.receipts.length > 0,
+      hasComment: !!inv.internalComment,
     };
   });
 

@@ -139,6 +139,7 @@ export default async function InvoicesListPage(
       }),
       primaryCurrency: inv.primaryCurrency,
       hasReceipt: inv.receipts.length > 0,
+      hasComment: !!inv.internalComment,
     };
   });
 

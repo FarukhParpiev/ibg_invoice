@@ -44,7 +44,9 @@ export default async function InvoiceDetailPage(
     include: {
       items: { orderBy: { positionNo: "asc" } },
       ourCompany: true,
-      ourBankAccount: true,
+      // Owning company comes along so we can flag cross-company accounts
+      // (invoice in company A's name, money to company B's account).
+      ourBankAccount: { include: { company: { select: { name: true } } } },
       counterparty: true,
       paymentTerms: true,
       parentInvoice: true,
@@ -243,6 +245,12 @@ export default async function InvoiceDetailPage(
             {invoice.ourBankAccount.swift &&
               ` · SWIFT ${invoice.ourBankAccount.swift}`}
           </div>
+          {invoice.ourBankAccount.companyId !== invoice.ourCompanyId && (
+            <div className="text-xs mt-1 bg-violet-50 text-violet-800 rounded px-2 py-1 inline-block">
+              Account of {invoice.ourBankAccount.company.name} — invoice is in{" "}
+              {invoice.ourCompany.name}&apos;s name
+            </div>
+          )}
         </Card>
 
         <Card title="Dates & terms">
@@ -379,6 +387,20 @@ export default async function InvoiceDetailPage(
           <h2 className="font-medium mb-2">Notes</h2>
           <p className="text-sm text-zinc-700 whitespace-pre-line">
             {invoice.notesText}
+          </p>
+        </section>
+      )}
+
+      {invoice.internalComment && (
+        <section className="border border-amber-200 rounded-lg p-5 bg-amber-50/50">
+          <h2 className="font-medium mb-2 flex items-center gap-2">
+            Internal comment
+            <span className="text-[10px] uppercase tracking-wide bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+              not on PDF
+            </span>
+          </h2>
+          <p className="text-sm text-zinc-700 whitespace-pre-line">
+            {invoice.internalComment}
           </p>
         </section>
       )}

@@ -172,6 +172,7 @@ const emptyDefaults: InvoiceFormValues = {
   vatIncluded: false,
   whtApplied: false,
   notesText: "",
+  internalComment: "",
   numberOverride: "",
   items: [
     {
@@ -328,8 +329,18 @@ export function InvoiceForm({
     isUsdTemplate,
   ]);
 
-  const currentCompany = ctx.companies.find((c) => c.id === ourCompanyId);
-  const availableBanks = currentCompany?.bankAccounts ?? [];
+  // The bank picker spans ALL our companies' accounts — the invoice may be
+  // issued in one company's name while the payment lands on another company's
+  // account. Groups sorted with the issuing company's accounts first.
+  const bankGroups = [...ctx.companies]
+    .filter((c) => c.bankAccounts.length > 0)
+    .sort((a, b) =>
+      a.id === ourCompanyId
+        ? -1
+        : b.id === ourCompanyId
+          ? 1
+          : a.name.localeCompare(b.name),
+    );
 
   // Counterparties are a single shared pool — all active ones are pickable
   // regardless of the invoice's location.
@@ -478,20 +489,29 @@ export function InvoiceForm({
             </select>
           </Field>
 
-          <Field label="Our bank account" error={formState.errors.ourBankAccountId?.message} wide>
-            <select
-              className="input"
-              disabled={!currentCompany}
-              {...register("ourBankAccountId")}
-            >
+          <Field label="Our bank account (any company's)" error={formState.errors.ourBankAccountId?.message} wide>
+            <select className="input" {...register("ourBankAccountId")}>
               <option value="">— select —</option>
-              {availableBanks.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.bankName} · {b.currency} · {b.accountNumber}
-                  {b.isDefault ? " (default)" : ""}
-                </option>
+              {bankGroups.map((g) => (
+                <optgroup
+                  key={g.id}
+                  label={
+                    g.id === ourCompanyId ? `${g.name} — selected company` : g.name
+                  }
+                >
+                  {g.bankAccounts.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.bankName} · {b.currency} · {b.accountNumber}
+                      {b.isDefault ? " (default)" : ""}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
+            <p className="text-xs text-zinc-500 mt-1">
+              The payment can go to another company&apos;s account — the invoice
+              header stays in the selected company&apos;s name.
+            </p>
           </Field>
 
           <Field label="Counterparty" error={formState.errors.counterpartyId?.message} wide>
@@ -951,12 +971,20 @@ export function InvoiceForm({
       </section>
 
       {/* ───── Notes ───── */}
-      <section className="border rounded-lg p-5 bg-white">
+      <section className="border rounded-lg p-5 bg-white space-y-4">
         <Field label="Notes (will be shown on the PDF)" wide>
           <textarea
             rows={3}
             className="input resize-y"
             {...register("notesText")}
+          />
+        </Field>
+        <Field label="Internal comment (staff only — NOT printed on the PDF)" wide>
+          <textarea
+            rows={3}
+            className="input resize-y bg-amber-50/40"
+            placeholder="Working notes for colleagues: reminders, context, what to double-check…"
+            {...register("internalComment")}
           />
         </Field>
       </section>
