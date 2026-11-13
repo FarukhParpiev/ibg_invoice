@@ -79,6 +79,7 @@ export default async function EditInvoicePage(
     vatIncluded: invoice.vatIncluded,
     whtApplied: invoice.whtApplied,
     notesText: invoice.notesText ?? "",
+    internalComment: invoice.internalComment ?? "",
     // Repurpose the same form field for two flows:
     //  · draft     → the planned-but-not-yet-applied numberOverride
     //  · non-draft → the actual current invoice number, edited in place

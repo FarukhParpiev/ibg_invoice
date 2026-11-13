@@ -40,6 +40,7 @@ export type BulkInvoiceRow = {
   total: string; // pre-formatted "1,234.50"
   primaryCurrency: string;
   hasReceipt: boolean;
+  hasComment: boolean;
 };
 
 export function BulkInvoiceTable({
@@ -250,6 +251,14 @@ export function BulkInvoiceTable({
                         +R
                       </span>
                     ) : null}
+                    {r.hasComment && (
+                      <span
+                        className="ml-2 text-[10px]"
+                        title="Has an internal comment (open the invoice to read it)"
+                      >
+                        💬
+                      </span>
+                    )}
                     {/* Phuket is the default — only flag Pattaya, so the list
                         stays clean while the non-default location stands out. */}
                     {r.location === "pattaya" && (

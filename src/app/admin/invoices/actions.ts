@@ -117,6 +117,10 @@ const invoiceSchema = z.object({
 
   notesText: z.string().max(10000).optional().or(z.literal("")),
 
+  // Internal working comment for staff. Shown in the admin UI only — it is
+  // NEVER printed on the PDF (unlike notesText, which goes to the Notes block).
+  internalComment: z.string().max(10000).optional().or(z.literal("")),
+
   // Optional manual override for the full invoice number when issuing.
   // Accepts any string — e.g. "23/04/2026-0001" or an external-system format
   // when migrating legacy invoices. Leave blank to use the default
@@ -236,12 +240,14 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
   }
   const v = parsed.data;
 
-  // Check that the selected bank account belongs to the selected company
+  // The bank account may belong to ANY of our companies — invoices are often
+  // issued in one company's name while the money lands on another company's
+  // account. We only check that the account exists.
   const bank = await prisma.bankAccount.findUnique({
     where: { id: v.ourBankAccountId },
   });
-  if (!bank || bank.companyId !== v.ourCompanyId) {
-    return { ok: false, error: "Bank account does not belong to the selected company" };
+  if (!bank) {
+    return { ok: false, error: "Bank account not found" };
   }
 
   const issueDate = parseDateOrNull(v.issueDate);
@@ -301,6 +307,7 @@ export async function createDraftInvoice(rawValues: unknown): Promise<Result> {
       totalUsd: toDecimalOrNull(totals.totalUsd),
 
       notesText: v.notesText || null,
+      internalComment: v.internalComment || null,
 
       ourCompanyId: v.ourCompanyId,
       ourBankAccountId: v.ourBankAccountId,
@@ -360,8 +367,8 @@ export async function updateDraftInvoice(
   const bank = await prisma.bankAccount.findUnique({
     where: { id: v.ourBankAccountId },
   });
-  if (!bank || bank.companyId !== v.ourCompanyId) {
-    return { ok: false, error: "Bank account does not belong to the selected company" };
+  if (!bank) {
+    return { ok: false, error: "Bank account not found" };
   }
 
   const issueDate = parseDateOrNull(v.issueDate);
@@ -437,6 +444,7 @@ export async function updateDraftInvoice(
         totalUsd: toDecimalOrNull(totals.totalUsd),
 
         notesText: v.notesText || null,
+        internalComment: v.internalComment || null,
 
         ourCompanyId: v.ourCompanyId,
         ourBankAccountId: v.ourBankAccountId,
